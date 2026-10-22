@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orb-speech"
+version = "0.1.0"
+description = "Local speech for orb: Whistle speech-to-text, Kokoro text-to-speech and Smart Turn end-of-turn detection, behind one small HTTP service."
+requires-python = ">=3.12"
+dependencies = [
+  "numpy>=2",
+  "soxr>=0.5",
+  "onnxruntime>=1.20",
+  "cactus-needle==3.2.8",
+  "kokoro-onnx>=0.6",
+  "transformers>=4.40",
+  "huggingface_hub>=0.30",
+  "fastapi>=0.110",
+  "uvicorn>=0.30",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

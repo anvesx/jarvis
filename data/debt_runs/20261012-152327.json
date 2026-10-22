@@ -1,0 +1,4554 @@
+{
+ "chat": "20261012-152327",
+ "topic": "Should our personal assistant store user passwords?",
+ "model": "jev-1.13.0",
+ "ran_at": "2026-10-19 14:04",
+ "seconds": 4.9,
+ "tokens": 21888,
+ "cost_usd": 0.0009,
+ "steps": [
+  {
+   "seq": 0,
+   "id": "M1",
+   "speaker": "human",
+   "text": "We should store user passwords in a plain JSON file so the assistant can log in for them.",
+   "call": {
+    "seconds": 0.45,
+    "tokens": 1158,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {},
+     "open_debts": {},
+     "earlier_messages": {},
+     "new_message": {
+      "id": "M1",
+      "speaker": "human",
+      "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.05,
+      "yes": false
+     },
+     {
+      "name": "claims",
+      "group": "message",
+      "label": "makes a claim",
+      "text": "Does `new_message` state its writer's own view, proposal or plan, or reject a point of the other side?",
+      "answer": 0.98,
+      "yes": true
+     },
+     {
+      "name": "gives_reason",
+      "group": "message",
+      "label": "gives a reason",
+      "text": "Does `new_message` give a reason, evidence or an example for a claim?",
+      "answer": 0.73,
+      "yes": true
+     },
+     {
+      "name": "repeats",
+      "group": "message",
+      "label": "repeats an old point",
+      "text": "Does `new_message` repeat a point that `new_message.speaker` already made in `earlier_messages`?",
+      "answer": 0.03,
+      "yes": false
+     },
+     {
+      "name": "changes_view",
+      "group": "message",
+      "label": "changes view",
+      "text": "Does `new_message.speaker` accept a point that they argued against earlier in `earlier_messages`, or change their own position?",
+      "answer": 0.03,
+      "yes": false
+     },
+     {
+      "name": "asks_to_close",
+      "group": "message",
+      "label": "asks to close",
+      "text": "Does `new_message` ask to conclude the discussion: to decide, to summarize or to stop?",
+      "answer": 0.13,
+      "yes": false
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.03,
+      "yes": false
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.98,
+      "yes": true
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.31,
+      "yes": false
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "option",
+     "option": "O1",
+     "rule": "M1 puts a new option on the table.",
+     "q": "new_option",
+     "p": 0.98
+    },
+    {
+     "type": "start",
+     "debt": "D1",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "q": "gives_reason",
+     "p": 0.73
+    },
+    {
+     "type": "start",
+     "debt": "D2",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "q": "new_option",
+     "p": 0.98
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    }
+   ],
+   "stage": "Open",
+   "stage_index": 0,
+   "stage_why": "1 option on the table. Test starts at 2.",
+   "need": {
+    "debt": "D2",
+    "kind": "option",
+    "promise": "Divergence",
+    "persona": "Rival",
+    "move": "Offer a second option, with one concrete reason.",
+    "why": "D2 is due, and the newest message started it.",
+    "old_persona": "Rival"
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 0,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 0,
+     "paid": 0,
+     "due": false
+    },
+    "Reflection": {
+     "owed": 1,
+     "paid": 0,
+     "due": false
+    },
+    "Progression": {
+     "owed": 0,
+     "paid": 0,
+     "due": false
+    },
+    "Resolution": {
+     "owed": 0,
+     "paid": 0,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Reflection",
+     "status": "waiting"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Divergence",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 1,
+   "id": "M2",
+   "speaker": "ai",
+   "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?",
+   "call": {
+    "seconds": 0.36,
+    "tokens": 942,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)"
+     },
+     "open_debts": {
+      "D1": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+      "D2": "Only one option is on the table. The ai owes a second option."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      }
+     },
+     "new_message": {
+      "id": "M2",
+      "speaker": "ai",
+      "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?"
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.88,
+      "yes": true
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.98,
+      "yes": true
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.83,
+      "yes": true
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.14,
+      "yes": false
+     },
+     {
+      "name": "pays_D1",
+      "group": "pay",
+      "debt": "D1",
+      "label": "pays D1",
+      "text": "Does `new_message` reply on its merits to the reason in `open_debts.D1`?",
+      "answer": 0.66,
+      "yes": true
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "pay",
+     "debt": "D1",
+     "rule": "Jev says that M2 pays D1.",
+     "q": "pays_D1",
+     "p": 0.66
+    },
+    {
+     "type": "option",
+     "option": "O2",
+     "rule": "M2 puts a new option on the table.",
+     "q": "new_option",
+     "p": 0.83
+    },
+    {
+     "type": "pay",
+     "debt": "D2",
+     "rule": "A second option is on the table, so the option debt is paid.",
+     "q": "new_option",
+     "p": 0.83
+    },
+    {
+     "type": "start",
+     "debt": "D3",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "q": "asks",
+     "p": 0.88
+    },
+    {
+     "type": "start",
+     "debt": "D4",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "q": "disagrees",
+     "p": 0.98
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "2 options are on the table, so the ideas can be tested.",
+   "check": {
+    "debt": "D2",
+    "persona": "Rival",
+    "q": "new_option",
+    "p": 0.83,
+    "done": true,
+    "text": "The Rival had to pay D2. It did."
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 1,
+     "paid": 0,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Progression": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 1,
+     "paid": 0,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "waiting"
+    }
+   ]
+  },
+  {
+   "seq": 2,
+   "id": "M3",
+   "speaker": "human",
+   "text": "Because it is simple, and the same JSON file already works well for the location data.",
+   "call": {
+    "seconds": 0.42,
+    "tokens": 1573,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)"
+     },
+     "open_debts": {
+      "D3": "M2 (ai) asks a question. The human owes an answer.",
+      "D4": "M2 (ai) disagrees with the human. The disagreement must end."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M2": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?"
+      }
+     },
+     "new_message": {
+      "id": "M3",
+      "speaker": "human",
+      "text": "Because it is simple, and the same JSON file already works well for the location data."
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.05,
+      "yes": false
+     },
+     {
+      "name": "claims",
+      "group": "message",
+      "label": "makes a claim",
+      "text": "Does `new_message` state its writer's own view, proposal or plan, or reject a point of the other side?",
+      "answer": 0.91,
+      "yes": true
+     },
+     {
+      "name": "gives_reason",
+      "group": "message",
+      "label": "gives a reason",
+      "text": "Does `new_message` give a reason, evidence or an example for a claim?",
+      "answer": 0.95,
+      "yes": true
+     },
+     {
+      "name": "repeats",
+      "group": "message",
+      "label": "repeats an old point",
+      "text": "Does `new_message` repeat a point that `new_message.speaker` already made in `earlier_messages`?",
+      "answer": 0.16,
+      "yes": false
+     },
+     {
+      "name": "changes_view",
+      "group": "message",
+      "label": "changes view",
+      "text": "Does `new_message.speaker` accept a point that they argued against earlier in `earlier_messages`, or change their own position?",
+      "answer": 0.05,
+      "yes": false
+     },
+     {
+      "name": "asks_to_close",
+      "group": "message",
+      "label": "asks to close",
+      "text": "Does `new_message` ask to conclude the discussion: to decide, to summarize or to stop?",
+      "answer": 0.05,
+      "yes": false
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.63,
+      "yes": true
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.07,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.43,
+      "yes": false
+     },
+     {
+      "name": "pays_D3",
+      "group": "pay",
+      "debt": "D3",
+      "label": "pays D3",
+      "text": "Does `new_message` give the answer that `open_debts.D3` waits for?",
+      "answer": 0.67,
+      "yes": true
+     },
+     {
+      "name": "pays_D4",
+      "group": "pay",
+      "debt": "D4",
+      "label": "pays D4",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D4`?",
+      "answer": 0.11,
+      "yes": false
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "pay",
+     "debt": "D3",
+     "rule": "Jev says that M3 pays D3.",
+     "q": "pays_D3",
+     "p": 0.67
+    },
+    {
+     "type": "start",
+     "debt": "D5",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "q": "gives_reason",
+     "p": 0.95
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "2 options are on the table, so the ideas can be tested.",
+   "need": {
+    "debt": "D5",
+    "kind": "weigh",
+    "promise": "Reflection",
+    "persona": "Judge",
+    "move": "Weigh the reason on its merits: accept it, or answer it with a better reason.",
+    "why": "D5 is due, and the newest message started it.",
+    "old_persona": "Judge"
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 2,
+     "paid": 1,
+     "due": true
+    },
+    "Progression": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 1,
+     "paid": 0,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "waiting"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Reflection",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 3,
+   "id": "M4",
+   "speaker": "ai",
+   "text": "Storing location data in a JSON file is fine, but that doesn't justify storing passwords there. The simplicity of using the same file for both types of data doesn't outweigh the massive security risk of storing plaintext passwords. How do you plan to protect that JSON file if it contains sensitive credentials?",
+   "call": {
+    "seconds": 0.29,
+    "tokens": 1218,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)"
+     },
+     "open_debts": {
+      "D4": "M2 (ai) disagrees with the human. The disagreement must end.",
+      "D5": "M3 (human) gives a reason. The ai owes a fair reply to that reason."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M2": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?"
+      },
+      "M3": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "Because it is simple, and the same JSON file already works well for the location data."
+      }
+     },
+     "new_message": {
+      "id": "M4",
+      "speaker": "ai",
+      "text": "Storing location data in a JSON file is fine, but that doesn't justify storing passwords there. The simplicity of using the same file for both types of data doesn't outweigh the massive security risk of storing plaintext passwords. How do you plan to protect that JSON file if it contains sensitive credentials?"
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.97,
+      "yes": true
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.97,
+      "yes": true
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.09,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.51,
+      "yes": true
+     },
+     {
+      "name": "pays_D4",
+      "group": "pay",
+      "debt": "D4",
+      "label": "pays D4",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D4`?",
+      "answer": 0.11,
+      "yes": false
+     },
+     {
+      "name": "pays_D5",
+      "group": "pay",
+      "debt": "D5",
+      "label": "pays D5",
+      "text": "Does `new_message` reply on its merits to the reason in `open_debts.D5`?",
+      "answer": 0.91,
+      "yes": true
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "pay",
+     "debt": "D5",
+     "rule": "Jev says that M4 pays D5.",
+     "q": "pays_D5",
+     "p": 0.91
+    },
+    {
+     "type": "start",
+     "debt": "D6",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "q": "asks",
+     "p": 0.97
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "2 options are on the table, so the ideas can be tested.",
+   "check": {
+    "debt": "D5",
+    "persona": "Judge",
+    "q": "pays_D5",
+    "p": 0.91,
+    "done": true,
+    "text": "The Judge had to pay D5. It did."
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 2,
+     "paid": 1,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 2,
+     "paid": 2,
+     "due": true
+    },
+    "Progression": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 1,
+     "paid": 0,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "waiting"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 4,
+   "id": "M5",
+   "speaker": "human",
+   "text": "No, I don't agree with you.",
+   "call": {
+    "seconds": 0.31,
+    "tokens": 1706,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)"
+     },
+     "open_debts": {
+      "D4": "M2 (ai) disagrees with the human. The disagreement must end.",
+      "D6": "M4 (ai) asks a question. The human owes an answer."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M2": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?"
+      },
+      "M3": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "Because it is simple, and the same JSON file already works well for the location data."
+      },
+      "M4": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "Storing location data in a JSON file is fine, but that doesn't justify storing passwords there. The simplicity of using the same file for both types of data doesn't outweigh the massive security risk of storing plaintext passwords. How do you plan to protect that JSON file if it contains sensitive credentials?"
+      }
+     },
+     "new_message": {
+      "id": "M5",
+      "speaker": "human",
+      "text": "No, I don't agree with you."
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.03,
+      "yes": false
+     },
+     {
+      "name": "claims",
+      "group": "message",
+      "label": "makes a claim",
+      "text": "Does `new_message` state its writer's own view, proposal or plan, or reject a point of the other side?",
+      "answer": 0.98,
+      "yes": true
+     },
+     {
+      "name": "gives_reason",
+      "group": "message",
+      "label": "gives a reason",
+      "text": "Does `new_message` give a reason, evidence or an example for a claim?",
+      "answer": 0.04,
+      "yes": false
+     },
+     {
+      "name": "repeats",
+      "group": "message",
+      "label": "repeats an old point",
+      "text": "Does `new_message` repeat a point that `new_message.speaker` already made in `earlier_messages`?",
+      "answer": 0.31,
+      "yes": false
+     },
+     {
+      "name": "changes_view",
+      "group": "message",
+      "label": "changes view",
+      "text": "Does `new_message.speaker` accept a point that they argued against earlier in `earlier_messages`, or change their own position?",
+      "answer": 0.03,
+      "yes": false
+     },
+     {
+      "name": "asks_to_close",
+      "group": "message",
+      "label": "asks to close",
+      "text": "Does `new_message` ask to conclude the discussion: to decide, to summarize or to stop?",
+      "answer": 0.07,
+      "yes": false
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.97,
+      "yes": true
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.05,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.26,
+      "yes": false
+     },
+     {
+      "name": "pays_D4",
+      "group": "pay",
+      "debt": "D4",
+      "label": "pays D4",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D4`?",
+      "answer": 0.05,
+      "yes": false
+     },
+     {
+      "name": "pays_D6",
+      "group": "pay",
+      "debt": "D6",
+      "label": "pays D6",
+      "text": "Does `new_message` give the answer that `open_debts.D6` waits for?",
+      "answer": 0.14,
+      "yes": false
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "start",
+     "debt": "D7",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "q": "claims",
+     "p": 0.98
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "2 options are on the table, so the ideas can be tested.",
+   "need": {
+    "debt": "D7",
+    "kind": "reason",
+    "promise": "Challenge",
+    "persona": "Examiner",
+    "move": "Ask for the reason. Do not agree, and do not argue yet.",
+    "why": "D7 is due, and the newest message started it. The AI waits for D6, because the person owes it.",
+    "old_persona": "Examiner"
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 2,
+     "paid": 1,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 1,
+     "paid": 0,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 2,
+     "paid": 2,
+     "due": true
+    },
+    "Progression": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 1,
+     "paid": 0,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "waiting"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D7",
+     "kind": "reason",
+     "owner": "human",
+     "start": 4,
+     "about": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Challenge",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 5,
+   "id": "M6",
+   "speaker": "ai",
+   "text": "What is your reasoning for disagreeing with the security risk I pointed out? Are you suggesting there is some specific security measure you have in mind that makes storing passwords in that file acceptable?",
+   "call": {
+    "seconds": 0.51,
+    "tokens": 1347,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)"
+     },
+     "open_debts": {
+      "D4": "M2 (ai) disagrees with the human. The disagreement must end.",
+      "D6": "M4 (ai) asks a question. The human owes an answer.",
+      "D7": "M5 (human) makes a claim with no reason. The human owes a reason for it."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M2": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?"
+      },
+      "M3": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "Because it is simple, and the same JSON file already works well for the location data."
+      },
+      "M4": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "Storing location data in a JSON file is fine, but that doesn't justify storing passwords there. The simplicity of using the same file for both types of data doesn't outweigh the massive security risk of storing plaintext passwords. How do you plan to protect that JSON file if it contains sensitive credentials?"
+      },
+      "M5": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "No, I don't agree with you."
+      }
+     },
+     "new_message": {
+      "id": "M6",
+      "speaker": "ai",
+      "text": "What is your reasoning for disagreeing with the security risk I pointed out? Are you suggesting there is some specific security measure you have in mind that makes storing passwords in that file acceptable?"
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.98,
+      "yes": true
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.21,
+      "yes": false
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.06,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.46,
+      "yes": false
+     },
+     {
+      "name": "pays_D4",
+      "group": "pay",
+      "debt": "D4",
+      "label": "pays D4",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D4`?",
+      "answer": 0.06,
+      "yes": false
+     },
+     {
+      "name": "asks_for_D7",
+      "group": "check",
+      "debt": "D7",
+      "label": "asks for D7",
+      "text": "Does `new_message` ask the human for the reason that `open_debts.D7` waits for?",
+      "answer": 0.86,
+      "yes": true
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "start",
+     "debt": "D8",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "q": "asks",
+     "p": 0.98
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "2 options are on the table, so the ideas can be tested.",
+   "check": {
+    "debt": "D7",
+    "persona": "Examiner",
+    "q": "asks_for_D7",
+    "p": 0.86,
+    "done": true,
+    "text": "The Examiner had to ask for D7. It did."
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 3,
+     "paid": 1,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 1,
+     "paid": 0,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 2,
+     "paid": 2,
+     "due": true
+    },
+    "Progression": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 1,
+     "paid": 0,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "waiting"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D7",
+     "kind": "reason",
+     "owner": "human",
+     "start": 4,
+     "about": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Challenge",
+     "status": "due"
+    },
+    {
+     "id": "D8",
+     "kind": "answer",
+     "owner": "human",
+     "start": 5,
+     "about": "M6 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 6,
+   "id": "M7",
+   "speaker": "human",
+   "text": "Encryption needs a key, and that key has to live on the same machine as the file, so an attacker who gets the file also gets the key.",
+   "call": {
+    "seconds": 0.28,
+    "tokens": 2062,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)"
+     },
+     "open_debts": {
+      "D4": "M2 (ai) disagrees with the human. The disagreement must end.",
+      "D6": "M4 (ai) asks a question. The human owes an answer.",
+      "D7": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+      "D8": "M6 (ai) asks a question. The human owes an answer."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M2": {
+       "speaker": "ai",
+       "why_shown": "started D4",
+       "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?"
+      },
+      "M3": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "Because it is simple, and the same JSON file already works well for the location data."
+      },
+      "M4": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "Storing location data in a JSON file is fine, but that doesn't justify storing passwords there. The simplicity of using the same file for both types of data doesn't outweigh the massive security risk of storing plaintext passwords. How do you plan to protect that JSON file if it contains sensitive credentials?"
+      },
+      "M5": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "No, I don't agree with you."
+      },
+      "M6": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "What is your reasoning for disagreeing with the security risk I pointed out? Are you suggesting there is some specific security measure you have in mind that makes storing passwords in that file acceptable?"
+      }
+     },
+     "new_message": {
+      "id": "M7",
+      "speaker": "human",
+      "text": "Encryption needs a key, and that key has to live on the same machine as the file, so an attacker who gets the file also gets the key."
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.05,
+      "yes": false
+     },
+     {
+      "name": "claims",
+      "group": "message",
+      "label": "makes a claim",
+      "text": "Does `new_message` state its writer's own view, proposal or plan, or reject a point of the other side?",
+      "answer": 0.92,
+      "yes": true
+     },
+     {
+      "name": "gives_reason",
+      "group": "message",
+      "label": "gives a reason",
+      "text": "Does `new_message` give a reason, evidence or an example for a claim?",
+      "answer": 0.95,
+      "yes": true
+     },
+     {
+      "name": "repeats",
+      "group": "message",
+      "label": "repeats an old point",
+      "text": "Does `new_message` repeat a point that `new_message.speaker` already made in `earlier_messages`?",
+      "answer": 0.08,
+      "yes": false
+     },
+     {
+      "name": "changes_view",
+      "group": "message",
+      "label": "changes view",
+      "text": "Does `new_message.speaker` accept a point that they argued against earlier in `earlier_messages`, or change their own position?",
+      "answer": 0.25,
+      "yes": false
+     },
+     {
+      "name": "asks_to_close",
+      "group": "message",
+      "label": "asks to close",
+      "text": "Does `new_message` ask to conclude the discussion: to decide, to summarize or to stop?",
+      "answer": 0.03,
+      "yes": false
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.71,
+      "yes": true
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.36,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.64,
+      "yes": true
+     },
+     {
+      "name": "pays_D4",
+      "group": "pay",
+      "debt": "D4",
+      "label": "pays D4",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D4`?",
+      "answer": 0.2,
+      "yes": false
+     },
+     {
+      "name": "pays_D6",
+      "group": "pay",
+      "debt": "D6",
+      "label": "pays D6",
+      "text": "Does `new_message` give the answer that `open_debts.D6` waits for?",
+      "answer": 0.85,
+      "yes": true
+     },
+     {
+      "name": "pays_D7",
+      "group": "pay",
+      "debt": "D7",
+      "label": "pays D7",
+      "text": "Does `new_message` give the reason that `open_debts.D7` waits for?",
+      "answer": 0.9,
+      "yes": true
+     },
+     {
+      "name": "pays_D8",
+      "group": "pay",
+      "debt": "D8",
+      "label": "pays D8",
+      "text": "Does `new_message` give the answer that `open_debts.D8` waits for?",
+      "answer": 0.89,
+      "yes": true
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "pay",
+     "debt": "D6",
+     "rule": "Jev says that M7 pays D6.",
+     "q": "pays_D6",
+     "p": 0.85
+    },
+    {
+     "type": "pay",
+     "debt": "D7",
+     "rule": "Jev says that M7 pays D7.",
+     "q": "pays_D7",
+     "p": 0.9
+    },
+    {
+     "type": "pay",
+     "debt": "D8",
+     "rule": "Jev says that M7 pays D8.",
+     "q": "pays_D8",
+     "p": 0.89
+    },
+    {
+     "type": "start",
+     "debt": "D9",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "q": "gives_reason",
+     "p": 0.95
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "2 options are on the table, so the ideas can be tested.",
+   "need": {
+    "debt": "D9",
+    "kind": "weigh",
+    "promise": "Reflection",
+    "persona": "Judge",
+    "move": "Weigh the reason on its merits: accept it, or answer it with a better reason.",
+    "why": "D9 is due, and the newest message started it.",
+    "old_persona": "Judge"
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 3,
+     "paid": 3,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 3,
+     "paid": 2,
+     "due": true
+    },
+    "Progression": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 1,
+     "paid": 0,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "waiting"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D6",
+     "paid_p": 0.85,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D7",
+     "kind": "reason",
+     "owner": "human",
+     "start": 4,
+     "about": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "paid": 6,
+     "paid_by": "pays_D7",
+     "paid_p": 0.9,
+     "promise": "Challenge",
+     "status": "paid"
+    },
+    {
+     "id": "D8",
+     "kind": "answer",
+     "owner": "human",
+     "start": 5,
+     "about": "M6 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D8",
+     "paid_p": 0.89,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D9",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 6,
+     "about": "M7 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Reflection",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 7,
+   "id": "M8",
+   "speaker": "ai",
+   "text": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key and decrypt the data. However, that doesn't solve the problem of the file itself being a single point of failure. What if we used a more robust key management system, like a dedicated secret manager, instead of relying on the local machine?",
+   "call": {
+    "seconds": 0.28,
+    "tokens": 1456,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)"
+     },
+     "open_debts": {
+      "D4": "M2 (ai) disagrees with the human. The disagreement must end.",
+      "D9": "M7 (human) gives a reason. The ai owes a fair reply to that reason."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M2": {
+       "speaker": "ai",
+       "why_shown": "started D4",
+       "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?"
+      },
+      "M4": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "Storing location data in a JSON file is fine, but that doesn't justify storing passwords there. The simplicity of using the same file for both types of data doesn't outweigh the massive security risk of storing plaintext passwords. How do you plan to protect that JSON file if it contains sensitive credentials?"
+      },
+      "M5": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "No, I don't agree with you."
+      },
+      "M6": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "What is your reasoning for disagreeing with the security risk I pointed out? Are you suggesting there is some specific security measure you have in mind that makes storing passwords in that file acceptable?"
+      },
+      "M7": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "Encryption needs a key, and that key has to live on the same machine as the file, so an attacker who gets the file also gets the key."
+      }
+     },
+     "new_message": {
+      "id": "M8",
+      "speaker": "ai",
+      "text": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key and decrypt the data. However, that doesn't solve the problem of the file itself being a single point of failure. What if we used a more robust key management system, like a dedicated secret manager, instead of relying on the local machine?"
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.44,
+      "yes": false
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.49,
+      "yes": false
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.91,
+      "yes": true
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.48,
+      "yes": false
+     },
+     {
+      "name": "pays_D4",
+      "group": "pay",
+      "debt": "D4",
+      "label": "pays D4",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D4`?",
+      "answer": 0.2,
+      "yes": false
+     },
+     {
+      "name": "pays_D9",
+      "group": "pay",
+      "debt": "D9",
+      "label": "pays D9",
+      "text": "Does `new_message` reply on its merits to the reason in `open_debts.D9`?",
+      "answer": 0.92,
+      "yes": true
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "pay",
+     "debt": "D9",
+     "rule": "Jev says that M8 pays D9.",
+     "q": "pays_D9",
+     "p": 0.92
+    },
+    {
+     "type": "option",
+     "option": "O3",
+     "rule": "M8 puts a new option on the table.",
+     "q": "new_option",
+     "p": 0.91
+    },
+    {
+     "type": "start",
+     "debt": "D10",
+     "rule": "The AI puts a new option on the table, so the person owes a reply to it.",
+     "q": "new_option",
+     "p": 0.91
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    },
+    {
+     "id": "O3",
+     "from": "M8"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "3 options are on the table, so the ideas can be tested.",
+   "check": {
+    "debt": "D9",
+    "persona": "Judge",
+    "q": "pays_D9",
+    "p": 0.92,
+    "done": true,
+    "text": "The Judge had to pay D9. It did."
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 4,
+     "paid": 3,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 3,
+     "paid": 3,
+     "due": true
+    },
+    "Progression": {
+     "owed": 0,
+     "paid": 0,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 1,
+     "paid": 0,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "waiting"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D6",
+     "paid_p": 0.85,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D7",
+     "kind": "reason",
+     "owner": "human",
+     "start": 4,
+     "about": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "paid": 6,
+     "paid_by": "pays_D7",
+     "paid_p": 0.9,
+     "promise": "Challenge",
+     "status": "paid"
+    },
+    {
+     "id": "D8",
+     "kind": "answer",
+     "owner": "human",
+     "start": 5,
+     "about": "M6 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D8",
+     "paid_p": 0.89,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D9",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 6,
+     "about": "M7 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 7,
+     "paid_by": "pays_D9",
+     "paid_p": 0.92,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D10",
+     "kind": "reply",
+     "owner": "human",
+     "start": 7,
+     "about": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+     "rule": "The AI puts a new option on the table, so the person owes a reply to it.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 8,
+   "id": "M9",
+   "speaker": "human",
+   "text": "We should still just use the JSON file for the passwords.",
+   "call": {
+    "seconds": 0.36,
+    "tokens": 1907,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)",
+      "O3": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key… (first proposed in M8)"
+     },
+     "open_debts": {
+      "D4": "M2 (ai) disagrees with the human. The disagreement must end.",
+      "D10": "M8 (ai) puts a new option on the table. The human owes a reply to it."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M2": {
+       "speaker": "ai",
+       "why_shown": "started D4",
+       "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?"
+      },
+      "M5": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "No, I don't agree with you."
+      },
+      "M6": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "What is your reasoning for disagreeing with the security risk I pointed out? Are you suggesting there is some specific security measure you have in mind that makes storing passwords in that file acceptable?"
+      },
+      "M7": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "Encryption needs a key, and that key has to live on the same machine as the file, so an attacker who gets the file also gets the key."
+      },
+      "M8": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key and decrypt the data. However, that doesn't solve the problem of the file itself being a single point of failure. What if we used a more robust key management system, like a dedicated secret manager, instead of relying on the local machine?"
+      }
+     },
+     "new_message": {
+      "id": "M9",
+      "speaker": "human",
+      "text": "We should still just use the JSON file for the passwords."
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.04,
+      "yes": false
+     },
+     {
+      "name": "claims",
+      "group": "message",
+      "label": "makes a claim",
+      "text": "Does `new_message` state its writer's own view, proposal or plan, or reject a point of the other side?",
+      "answer": 0.99,
+      "yes": true
+     },
+     {
+      "name": "gives_reason",
+      "group": "message",
+      "label": "gives a reason",
+      "text": "Does `new_message` give a reason, evidence or an example for a claim?",
+      "answer": 0.05,
+      "yes": false
+     },
+     {
+      "name": "repeats",
+      "group": "message",
+      "label": "repeats an old point",
+      "text": "Does `new_message` repeat a point that `new_message.speaker` already made in `earlier_messages`?",
+      "answer": 0.9,
+      "yes": true
+     },
+     {
+      "name": "changes_view",
+      "group": "message",
+      "label": "changes view",
+      "text": "Does `new_message.speaker` accept a point that they argued against earlier in `earlier_messages`, or change their own position?",
+      "answer": 0.06,
+      "yes": false
+     },
+     {
+      "name": "asks_to_close",
+      "group": "message",
+      "label": "asks to close",
+      "text": "Does `new_message` ask to conclude the discussion: to decide, to summarize or to stop?",
+      "answer": 0.21,
+      "yes": false
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.89,
+      "yes": true
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.04,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.34,
+      "yes": false
+     },
+     {
+      "name": "pays_D4",
+      "group": "pay",
+      "debt": "D4",
+      "label": "pays D4",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D4`?",
+      "answer": 0.07,
+      "yes": false
+     },
+     {
+      "name": "pays_D10",
+      "group": "pay",
+      "debt": "D10",
+      "label": "pays D10",
+      "text": "Does `new_message` reply to the option in `open_debts.D10`?",
+      "answer": 0.18,
+      "yes": false
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "start",
+     "debt": "D11",
+     "rule": "The person repeats a point with no reason, and a reason was already asked for once. Asking again would go in a circle, so the AI owes a new step.",
+     "q": "repeats",
+     "p": 0.9
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    },
+    {
+     "id": "O3",
+     "from": "M8"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "3 options are on the table, so the ideas can be tested.",
+   "need": {
+    "debt": "D11",
+    "kind": "move_on",
+    "promise": "Progression",
+    "persona": "Navigator",
+    "move": "Name the repeat, and move the talk to a new step.",
+    "why": "D11 is due, and the newest message started it. The AI waits for D10, because the person owes it.",
+    "old_persona": "Navigator"
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 4,
+     "paid": 3,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 3,
+     "paid": 3,
+     "due": true
+    },
+    "Progression": {
+     "owed": 1,
+     "paid": 0,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 1,
+     "paid": 0,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "waiting"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D6",
+     "paid_p": 0.85,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D7",
+     "kind": "reason",
+     "owner": "human",
+     "start": 4,
+     "about": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "paid": 6,
+     "paid_by": "pays_D7",
+     "paid_p": 0.9,
+     "promise": "Challenge",
+     "status": "paid"
+    },
+    {
+     "id": "D8",
+     "kind": "answer",
+     "owner": "human",
+     "start": 5,
+     "about": "M6 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D8",
+     "paid_p": 0.89,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D9",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 6,
+     "about": "M7 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 7,
+     "paid_by": "pays_D9",
+     "paid_p": 0.92,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D10",
+     "kind": "reply",
+     "owner": "human",
+     "start": 7,
+     "about": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+     "rule": "The AI puts a new option on the table, so the person owes a reply to it.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D11",
+     "kind": "move_on",
+     "owner": "ai",
+     "start": 8,
+     "about": "M9 (human) repeats an earlier point with nothing new. The ai owes a new step.",
+     "rule": "The person repeats a point with no reason, and a reason was already asked for once. Asking again would go in a circle, so the AI owes a new step.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Progression",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 9,
+   "id": "M10",
+   "speaker": "ai",
+   "text": "You are repeating the idea that the JSON file is the best place for passwords. Can you explain why you feel that a dedicated secret manager wouldn't provide a better security posture than whatever method you envision for protecting the file locally?",
+   "call": {
+    "seconds": 0.3,
+    "tokens": 1531,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)",
+      "O3": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key… (first proposed in M8)"
+     },
+     "open_debts": {
+      "D4": "M2 (ai) disagrees with the human. The disagreement must end.",
+      "D10": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+      "D11": "M9 (human) repeats an earlier point with nothing new. The ai owes a new step."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M2": {
+       "speaker": "ai",
+       "why_shown": "started D4",
+       "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?"
+      },
+      "M6": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "What is your reasoning for disagreeing with the security risk I pointed out? Are you suggesting there is some specific security measure you have in mind that makes storing passwords in that file acceptable?"
+      },
+      "M7": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "Encryption needs a key, and that key has to live on the same machine as the file, so an attacker who gets the file also gets the key."
+      },
+      "M8": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key and decrypt the data. However, that doesn't solve the problem of the file itself being a single point of failure. What if we used a more robust key management system, like a dedicated secret manager, instead of relying on the local machine?"
+      },
+      "M9": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "We should still just use the JSON file for the passwords."
+      }
+     },
+     "new_message": {
+      "id": "M10",
+      "speaker": "ai",
+      "text": "You are repeating the idea that the JSON file is the best place for passwords. Can you explain why you feel that a dedicated secret manager wouldn't provide a better security posture than whatever method you envision for protecting the file locally?"
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.97,
+      "yes": true
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.76,
+      "yes": true
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.14,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.45,
+      "yes": false
+     },
+     {
+      "name": "pays_D4",
+      "group": "pay",
+      "debt": "D4",
+      "label": "pays D4",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D4`?",
+      "answer": 0.06,
+      "yes": false
+     },
+     {
+      "name": "pays_D11",
+      "group": "pay",
+      "debt": "D11",
+      "label": "pays D11",
+      "text": "Does `new_message` move the discussion to a new step, as `open_debts.D11` asks?",
+      "answer": 0.91,
+      "yes": true
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "pay",
+     "debt": "D11",
+     "rule": "Jev says that M10 pays D11.",
+     "q": "pays_D11",
+     "p": 0.91
+    },
+    {
+     "type": "start",
+     "debt": "D12",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "q": "asks",
+     "p": 0.97
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    },
+    {
+     "id": "O3",
+     "from": "M8"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "3 options are on the table, so the ideas can be tested.",
+   "check": {
+    "debt": "D11",
+    "persona": "Navigator",
+    "q": "pays_D11",
+    "p": 0.91,
+    "done": true,
+    "text": "The Navigator had to pay D11. It did."
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 5,
+     "paid": 3,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 3,
+     "paid": 3,
+     "due": true
+    },
+    "Progression": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 1,
+     "paid": 0,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "waiting"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D6",
+     "paid_p": 0.85,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D7",
+     "kind": "reason",
+     "owner": "human",
+     "start": 4,
+     "about": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "paid": 6,
+     "paid_by": "pays_D7",
+     "paid_p": 0.9,
+     "promise": "Challenge",
+     "status": "paid"
+    },
+    {
+     "id": "D8",
+     "kind": "answer",
+     "owner": "human",
+     "start": 5,
+     "about": "M6 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D8",
+     "paid_p": 0.89,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D9",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 6,
+     "about": "M7 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 7,
+     "paid_by": "pays_D9",
+     "paid_p": 0.92,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D10",
+     "kind": "reply",
+     "owner": "human",
+     "start": 7,
+     "about": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+     "rule": "The AI puts a new option on the table, so the person owes a reply to it.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D11",
+     "kind": "move_on",
+     "owner": "ai",
+     "start": 8,
+     "about": "M9 (human) repeats an earlier point with nothing new. The ai owes a new step.",
+     "rule": "The person repeats a point with no reason, and a reason was already asked for once. Asking again would go in a circle, so the AI owes a new step.",
+     "paid": 9,
+     "paid_by": "pays_D11",
+     "paid_p": 0.91,
+     "promise": "Progression",
+     "status": "paid"
+    },
+    {
+     "id": "D12",
+     "kind": "answer",
+     "owner": "human",
+     "start": 9,
+     "about": "M10 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 10,
+   "id": "M11",
+   "speaker": "human",
+   "text": "OK, fair point. We should not store plain passwords.",
+   "call": {
+    "seconds": 0.29,
+    "tokens": 2022,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)",
+      "O3": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key… (first proposed in M8)"
+     },
+     "open_debts": {
+      "D4": "M2 (ai) disagrees with the human. The disagreement must end.",
+      "D10": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+      "D12": "M10 (ai) asks a question. The human owes an answer."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M2": {
+       "speaker": "ai",
+       "why_shown": "started D4",
+       "text": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered using strong, one-way hashing functions instead of storing the actual passwords?"
+      },
+      "M7": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "Encryption needs a key, and that key has to live on the same machine as the file, so an attacker who gets the file also gets the key."
+      },
+      "M8": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key and decrypt the data. However, that doesn't solve the problem of the file itself being a single point of failure. What if we used a more robust key management system, like a dedicated secret manager, instead of relying on the local machine?"
+      },
+      "M9": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "We should still just use the JSON file for the passwords."
+      },
+      "M10": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "You are repeating the idea that the JSON file is the best place for passwords. Can you explain why you feel that a dedicated secret manager wouldn't provide a better security posture than whatever method you envision for protecting the file locally?"
+      }
+     },
+     "new_message": {
+      "id": "M11",
+      "speaker": "human",
+      "text": "OK, fair point. We should not store plain passwords."
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.03,
+      "yes": false
+     },
+     {
+      "name": "claims",
+      "group": "message",
+      "label": "makes a claim",
+      "text": "Does `new_message` state its writer's own view, proposal or plan, or reject a point of the other side?",
+      "answer": 0.98,
+      "yes": true
+     },
+     {
+      "name": "gives_reason",
+      "group": "message",
+      "label": "gives a reason",
+      "text": "Does `new_message` give a reason, evidence or an example for a claim?",
+      "answer": 0.06,
+      "yes": false
+     },
+     {
+      "name": "repeats",
+      "group": "message",
+      "label": "repeats an old point",
+      "text": "Does `new_message` repeat a point that `new_message.speaker` already made in `earlier_messages`?",
+      "answer": 0.13,
+      "yes": false
+     },
+     {
+      "name": "changes_view",
+      "group": "message",
+      "label": "changes view",
+      "text": "Does `new_message.speaker` accept a point that they argued against earlier in `earlier_messages`, or change their own position?",
+      "answer": 0.93,
+      "yes": true
+     },
+     {
+      "name": "asks_to_close",
+      "group": "message",
+      "label": "asks to close",
+      "text": "Does `new_message` ask to conclude the discussion: to decide, to summarize or to stop?",
+      "answer": 0.43,
+      "yes": false
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.08,
+      "yes": false
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.15,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.09,
+      "yes": false
+     },
+     {
+      "name": "pays_D4",
+      "group": "pay",
+      "debt": "D4",
+      "label": "pays D4",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D4`?",
+      "answer": 0.85,
+      "yes": true
+     },
+     {
+      "name": "pays_D10",
+      "group": "pay",
+      "debt": "D10",
+      "label": "pays D10",
+      "text": "Does `new_message` reply to the option in `open_debts.D10`?",
+      "answer": 0.33,
+      "yes": false
+     },
+     {
+      "name": "pays_D12",
+      "group": "pay",
+      "debt": "D12",
+      "label": "pays D12",
+      "text": "Does `new_message` give the answer that `open_debts.D12` waits for?",
+      "answer": 0.44,
+      "yes": false
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "pay",
+     "debt": "D4",
+     "rule": "Jev says that M11 pays D4.",
+     "q": "pays_D4",
+     "p": 0.85
+    },
+    {
+     "type": "start",
+     "debt": "D13",
+     "rule": "The person changes view, so the AI owes a record of what is now agreed.",
+     "q": "changes_view",
+     "p": 0.93
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    },
+    {
+     "id": "O3",
+     "from": "M8"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "3 options are on the table, so the ideas can be tested.",
+   "need": {
+    "debt": "D13",
+    "kind": "record",
+    "promise": "Reflection",
+    "persona": "Judge",
+    "move": "Say clearly what is now agreed.",
+    "why": "D13 is due, and the newest message started it. The AI waits for D10 and D12, because the person owes them.",
+    "old_persona": "Judge"
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 5,
+     "paid": 3,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 4,
+     "paid": 3,
+     "due": true
+    },
+    "Progression": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 1,
+     "paid": 1,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": 10,
+     "paid_by": "pays_D4",
+     "paid_p": 0.85,
+     "promise": "Resolution",
+     "status": "paid"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D6",
+     "paid_p": 0.85,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D7",
+     "kind": "reason",
+     "owner": "human",
+     "start": 4,
+     "about": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "paid": 6,
+     "paid_by": "pays_D7",
+     "paid_p": 0.9,
+     "promise": "Challenge",
+     "status": "paid"
+    },
+    {
+     "id": "D8",
+     "kind": "answer",
+     "owner": "human",
+     "start": 5,
+     "about": "M6 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D8",
+     "paid_p": 0.89,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D9",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 6,
+     "about": "M7 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 7,
+     "paid_by": "pays_D9",
+     "paid_p": 0.92,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D10",
+     "kind": "reply",
+     "owner": "human",
+     "start": 7,
+     "about": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+     "rule": "The AI puts a new option on the table, so the person owes a reply to it.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D11",
+     "kind": "move_on",
+     "owner": "ai",
+     "start": 8,
+     "about": "M9 (human) repeats an earlier point with nothing new. The ai owes a new step.",
+     "rule": "The person repeats a point with no reason, and a reason was already asked for once. Asking again would go in a circle, so the AI owes a new step.",
+     "paid": 9,
+     "paid_by": "pays_D11",
+     "paid_p": 0.91,
+     "promise": "Progression",
+     "status": "paid"
+    },
+    {
+     "id": "D12",
+     "kind": "answer",
+     "owner": "human",
+     "start": 9,
+     "about": "M10 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D13",
+     "kind": "record",
+     "owner": "ai",
+     "start": 10,
+     "about": "M11 (human) changes view. The ai owes a clear record of what is now agreed.",
+     "rule": "The person changes view, so the AI owes a record of what is now agreed.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Reflection",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 11,
+   "id": "M12",
+   "speaker": "ai",
+   "text": "We have agreed that storing plain passwords is not acceptable. The most important point still open is how to securely manage the encryption key without placing it on the same machine as the file.",
+   "call": {
+    "seconds": 0.43,
+    "tokens": 1331,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)",
+      "O3": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key… (first proposed in M8)"
+     },
+     "open_debts": {
+      "D10": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+      "D12": "M10 (ai) asks a question. The human owes an answer.",
+      "D13": "M11 (human) changes view. The ai owes a clear record of what is now agreed."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M8": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key and decrypt the data. However, that doesn't solve the problem of the file itself being a single point of failure. What if we used a more robust key management system, like a dedicated secret manager, instead of relying on the local machine?"
+      },
+      "M9": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "We should still just use the JSON file for the passwords."
+      },
+      "M10": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "You are repeating the idea that the JSON file is the best place for passwords. Can you explain why you feel that a dedicated secret manager wouldn't provide a better security posture than whatever method you envision for protecting the file locally?"
+      },
+      "M11": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "OK, fair point. We should not store plain passwords."
+      }
+     },
+     "new_message": {
+      "id": "M12",
+      "speaker": "ai",
+      "text": "We have agreed that storing plain passwords is not acceptable. The most important point still open is how to securely manage the encryption key without placing it on the same machine as the file."
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.1,
+      "yes": false
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.17,
+      "yes": false
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.19,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.97,
+      "yes": true
+     },
+     {
+      "name": "pays_D13",
+      "group": "pay",
+      "debt": "D13",
+      "label": "pays D13",
+      "text": "Does `new_message` state what is now agreed, as `open_debts.D13` asks?",
+      "answer": 0.96,
+      "yes": true
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "pay",
+     "debt": "D13",
+     "rule": "Jev says that M12 pays D13.",
+     "q": "pays_D13",
+     "p": 0.96
+    },
+    {
+     "type": "start",
+     "debt": "D14",
+     "rule": "An open point is named, so it must be settled before the talk closes.",
+     "q": "names_open_point",
+     "p": 0.97
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    },
+    {
+     "id": "O3",
+     "from": "M8"
+    }
+   ],
+   "stage": "Test",
+   "stage_index": 1,
+   "stage_why": "3 options are on the table, so the ideas can be tested.",
+   "check": {
+    "debt": "D13",
+    "persona": "Judge",
+    "q": "pays_D13",
+    "p": 0.96,
+    "done": true,
+    "text": "The Judge had to pay D13. It did."
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 5,
+     "paid": 3,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 4,
+     "paid": 4,
+     "due": true
+    },
+    "Progression": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 2,
+     "paid": 1,
+     "due": false
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": 10,
+     "paid_by": "pays_D4",
+     "paid_p": 0.85,
+     "promise": "Resolution",
+     "status": "paid"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D6",
+     "paid_p": 0.85,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D7",
+     "kind": "reason",
+     "owner": "human",
+     "start": 4,
+     "about": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "paid": 6,
+     "paid_by": "pays_D7",
+     "paid_p": 0.9,
+     "promise": "Challenge",
+     "status": "paid"
+    },
+    {
+     "id": "D8",
+     "kind": "answer",
+     "owner": "human",
+     "start": 5,
+     "about": "M6 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D8",
+     "paid_p": 0.89,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D9",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 6,
+     "about": "M7 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 7,
+     "paid_by": "pays_D9",
+     "paid_p": 0.92,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D10",
+     "kind": "reply",
+     "owner": "human",
+     "start": 7,
+     "about": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+     "rule": "The AI puts a new option on the table, so the person owes a reply to it.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D11",
+     "kind": "move_on",
+     "owner": "ai",
+     "start": 8,
+     "about": "M9 (human) repeats an earlier point with nothing new. The ai owes a new step.",
+     "rule": "The person repeats a point with no reason, and a reason was already asked for once. Asking again would go in a circle, so the AI owes a new step.",
+     "paid": 9,
+     "paid_by": "pays_D11",
+     "paid_p": 0.91,
+     "promise": "Progression",
+     "status": "paid"
+    },
+    {
+     "id": "D12",
+     "kind": "answer",
+     "owner": "human",
+     "start": 9,
+     "about": "M10 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D13",
+     "kind": "record",
+     "owner": "ai",
+     "start": 10,
+     "about": "M11 (human) changes view. The ai owes a clear record of what is now agreed.",
+     "rule": "The person changes view, so the AI owes a record of what is now agreed.",
+     "paid": 11,
+     "paid_by": "pays_D13",
+     "paid_p": 0.96,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D14",
+     "kind": "end",
+     "owner": "both",
+     "start": 11,
+     "about": "M12 (ai) names a point that is still open. It must be settled.",
+     "rule": "An open point is named, so it must be settled before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "waiting"
+    }
+   ]
+  },
+  {
+   "seq": 12,
+   "id": "M13",
+   "speaker": "human",
+   "text": "Let's decide now. Can you summarize where we are?",
+   "call": {
+    "seconds": 0.32,
+    "tokens": 2002,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)",
+      "O3": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key… (first proposed in M8)"
+     },
+     "open_debts": {
+      "D10": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+      "D12": "M10 (ai) asks a question. The human owes an answer.",
+      "D14": "M12 (ai) names a point that is still open. It must be settled."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M8": {
+       "speaker": "ai",
+       "why_shown": "started D10",
+       "text": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key and decrypt the data. However, that doesn't solve the problem of the file itself being a single point of failure. What if we used a more robust key management system, like a dedicated secret manager, instead of relying on the local machine?"
+      },
+      "M9": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "We should still just use the JSON file for the passwords."
+      },
+      "M10": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "You are repeating the idea that the JSON file is the best place for passwords. Can you explain why you feel that a dedicated secret manager wouldn't provide a better security posture than whatever method you envision for protecting the file locally?"
+      },
+      "M11": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "OK, fair point. We should not store plain passwords."
+      },
+      "M12": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "We have agreed that storing plain passwords is not acceptable. The most important point still open is how to securely manage the encryption key without placing it on the same machine as the file."
+      }
+     },
+     "new_message": {
+      "id": "M13",
+      "speaker": "human",
+      "text": "Let's decide now. Can you summarize where we are?"
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.97,
+      "yes": true
+     },
+     {
+      "name": "claims",
+      "group": "message",
+      "label": "makes a claim",
+      "text": "Does `new_message` state its writer's own view, proposal or plan, or reject a point of the other side?",
+      "answer": 0.42,
+      "yes": false
+     },
+     {
+      "name": "gives_reason",
+      "group": "message",
+      "label": "gives a reason",
+      "text": "Does `new_message` give a reason, evidence or an example for a claim?",
+      "answer": 0.04,
+      "yes": false
+     },
+     {
+      "name": "repeats",
+      "group": "message",
+      "label": "repeats an old point",
+      "text": "Does `new_message` repeat a point that `new_message.speaker` already made in `earlier_messages`?",
+      "answer": 0.1,
+      "yes": false
+     },
+     {
+      "name": "changes_view",
+      "group": "message",
+      "label": "changes view",
+      "text": "Does `new_message.speaker` accept a point that they argued against earlier in `earlier_messages`, or change their own position?",
+      "answer": 0.57,
+      "yes": true
+     },
+     {
+      "name": "asks_to_close",
+      "group": "message",
+      "label": "asks to close",
+      "text": "Does `new_message` ask to conclude the discussion: to decide, to summarize or to stop?",
+      "answer": 0.97,
+      "yes": true
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.04,
+      "yes": false
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.06,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.05,
+      "yes": false
+     },
+     {
+      "name": "pays_D10",
+      "group": "pay",
+      "debt": "D10",
+      "label": "pays D10",
+      "text": "Does `new_message` reply to the option in `open_debts.D10`?",
+      "answer": 0.09,
+      "yes": false
+     },
+     {
+      "name": "pays_D12",
+      "group": "pay",
+      "debt": "D12",
+      "label": "pays D12",
+      "text": "Does `new_message` give the answer that `open_debts.D12` waits for?",
+      "answer": 0.07,
+      "yes": false
+     },
+     {
+      "name": "pays_D14",
+      "group": "pay",
+      "debt": "D14",
+      "label": "pays D14",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D14`?",
+      "answer": 0.1,
+      "yes": false
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "start",
+     "debt": "D15",
+     "rule": "The person asks to close, so the AI owes a summary and a decision.",
+     "q": "asks_to_close",
+     "p": 0.97
+    },
+    {
+     "type": "start",
+     "debt": "D16",
+     "rule": "The person changes view, so the AI owes a record of what is now agreed.",
+     "q": "changes_view",
+     "p": 0.57
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    },
+    {
+     "id": "O3",
+     "from": "M8"
+    }
+   ],
+   "stage": "Close",
+   "stage_index": 2,
+   "stage_why": "The person asks to close.",
+   "need": {
+    "debt": "D15",
+    "kind": "summary",
+    "promise": "Resolution",
+    "persona": "Chair",
+    "move": "Sum up where the discussion stands, then propose a decision.",
+    "why": "D15 is due, and the newest message started it. 2 due debts started here. The fixed order puts Resolution first. The AI waits for D10 and D12, because the person owes them.",
+    "old_persona": "Chair"
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 5,
+     "paid": 3,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 5,
+     "paid": 4,
+     "due": true
+    },
+    "Progression": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 3,
+     "paid": 1,
+     "due": true
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": 10,
+     "paid_by": "pays_D4",
+     "paid_p": 0.85,
+     "promise": "Resolution",
+     "status": "paid"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D6",
+     "paid_p": 0.85,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D7",
+     "kind": "reason",
+     "owner": "human",
+     "start": 4,
+     "about": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "paid": 6,
+     "paid_by": "pays_D7",
+     "paid_p": 0.9,
+     "promise": "Challenge",
+     "status": "paid"
+    },
+    {
+     "id": "D8",
+     "kind": "answer",
+     "owner": "human",
+     "start": 5,
+     "about": "M6 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D8",
+     "paid_p": 0.89,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D9",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 6,
+     "about": "M7 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 7,
+     "paid_by": "pays_D9",
+     "paid_p": 0.92,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D10",
+     "kind": "reply",
+     "owner": "human",
+     "start": 7,
+     "about": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+     "rule": "The AI puts a new option on the table, so the person owes a reply to it.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D11",
+     "kind": "move_on",
+     "owner": "ai",
+     "start": 8,
+     "about": "M9 (human) repeats an earlier point with nothing new. The ai owes a new step.",
+     "rule": "The person repeats a point with no reason, and a reason was already asked for once. Asking again would go in a circle, so the AI owes a new step.",
+     "paid": 9,
+     "paid_by": "pays_D11",
+     "paid_p": 0.91,
+     "promise": "Progression",
+     "status": "paid"
+    },
+    {
+     "id": "D12",
+     "kind": "answer",
+     "owner": "human",
+     "start": 9,
+     "about": "M10 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D13",
+     "kind": "record",
+     "owner": "ai",
+     "start": 10,
+     "about": "M11 (human) changes view. The ai owes a clear record of what is now agreed.",
+     "rule": "The person changes view, so the AI owes a record of what is now agreed.",
+     "paid": 11,
+     "paid_by": "pays_D13",
+     "paid_p": 0.96,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D14",
+     "kind": "end",
+     "owner": "both",
+     "start": 11,
+     "about": "M12 (ai) names a point that is still open. It must be settled.",
+     "rule": "An open point is named, so it must be settled before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "due"
+    },
+    {
+     "id": "D15",
+     "kind": "summary",
+     "owner": "ai",
+     "start": 12,
+     "about": "M13 (human) asks to close. The ai owes a summary and a decision.",
+     "rule": "The person asks to close, so the AI owes a summary and a decision.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "due"
+    },
+    {
+     "id": "D16",
+     "kind": "record",
+     "owner": "ai",
+     "start": 12,
+     "about": "M13 (human) changes view. The ai owes a clear record of what is now agreed.",
+     "rule": "The person changes view, so the AI owes a record of what is now agreed.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Reflection",
+     "status": "due"
+    }
+   ]
+  },
+  {
+   "seq": 13,
+   "id": "M14",
+   "speaker": "ai",
+   "text": "We have established that storing plain passwords in a JSON file is unacceptable due to security risks. The main unresolved issue is how to securely manage the encryption key so it is not co-located with the password file. Do you accept this summary of where we stand?",
+   "call": {
+    "seconds": 0.29,
+    "tokens": 1633,
+    "model": "jev-1.13.0",
+    "state": {
+     "topic": "Should our personal assistant store user passwords?",
+     "options": {
+      "O1": "We should store user passwords in a plain JSON file so the assistant can log in for them. (first proposed in M1)",
+      "O2": "That sounds like a very insecure approach. Storing passwords in a plain JSON file exposes them directly if that file is ever compromised. Have you considered u… (first proposed in M2)",
+      "O3": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key… (first proposed in M8)"
+     },
+     "open_debts": {
+      "D10": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+      "D12": "M10 (ai) asks a question. The human owes an answer.",
+      "D14": "M12 (ai) names a point that is still open. It must be settled.",
+      "D15": "M13 (human) asks to close. The ai owes a summary and a decision.",
+      "D16": "M13 (human) changes view. The ai owes a clear record of what is now agreed."
+     },
+     "earlier_messages": {
+      "M1": {
+       "speaker": "human",
+       "why_shown": "opening message",
+       "text": "We should store user passwords in a plain JSON file so the assistant can log in for them."
+      },
+      "M8": {
+       "speaker": "ai",
+       "why_shown": "started D10",
+       "text": "You are correct that if the encryption key resides on the same machine, an attacker who gains access to both the file and the machine can easily obtain the key and decrypt the data. However, that doesn't solve the problem of the file itself being a single point of failure. What if we used a more robust key management system, like a dedicated secret manager, instead of relying on the local machine?"
+      },
+      "M10": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "You are repeating the idea that the JSON file is the best place for passwords. Can you explain why you feel that a dedicated secret manager wouldn't provide a better security posture than whatever method you envision for protecting the file locally?"
+      },
+      "M11": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "OK, fair point. We should not store plain passwords."
+      },
+      "M12": {
+       "speaker": "ai",
+       "why_shown": "recent",
+       "text": "We have agreed that storing plain passwords is not acceptable. The most important point still open is how to securely manage the encryption key without placing it on the same machine as the file."
+      },
+      "M13": {
+       "speaker": "human",
+       "why_shown": "recent",
+       "text": "Let's decide now. Can you summarize where we are?"
+      }
+     },
+     "new_message": {
+      "id": "M14",
+      "speaker": "ai",
+      "text": "We have established that storing plain passwords in a JSON file is unacceptable due to security risks. The main unresolved issue is how to securely manage the encryption key so it is not co-located with the password file. Do you accept this summary of where we stand?"
+     }
+    },
+    "questions": [
+     {
+      "name": "asks",
+      "group": "message",
+      "label": "asks a question",
+      "text": "Does `new_message` ask the other side a question that needs a reply?",
+      "answer": 0.95,
+      "yes": true
+     },
+     {
+      "name": "disagrees",
+      "group": "message",
+      "label": "disagrees",
+      "text": "Does `new_message` disagree with, reject or correct a point that the other side made in `earlier_messages`?",
+      "answer": 0.07,
+      "yes": false
+     },
+     {
+      "name": "new_option",
+      "group": "message",
+      "label": "puts a new option on the table",
+      "text": "Does `new_message` put a new option on the table: a way to settle `topic` that is not already in `options`?",
+      "answer": 0.08,
+      "yes": false
+     },
+     {
+      "name": "names_open_point",
+      "group": "message",
+      "label": "names an open point",
+      "text": "Does `new_message` name a point that is still open and must be decided before the discussion can end?",
+      "answer": 0.97,
+      "yes": true
+     },
+     {
+      "name": "pays_D14",
+      "group": "pay",
+      "debt": "D14",
+      "label": "pays D14",
+      "text": "Does `new_message` end the disagreement or settle the open point in `open_debts.D14`?",
+      "answer": 0.11,
+      "yes": false
+     },
+     {
+      "name": "pays_D15",
+      "group": "pay",
+      "debt": "D15",
+      "label": "pays D15",
+      "text": "Does `new_message` give the summary or decision that `open_debts.D15` asks for?",
+      "answer": 0.95,
+      "yes": true
+     },
+     {
+      "name": "pays_D16",
+      "group": "pay",
+      "debt": "D16",
+      "label": "pays D16",
+      "text": "Does `new_message` state what is now agreed, as `open_debts.D16` asks?",
+      "answer": 0.94,
+      "yes": true
+     }
+    ]
+   },
+   "events": [
+    {
+     "type": "pay",
+     "debt": "D15",
+     "rule": "Jev says that M14 pays D15.",
+     "q": "pays_D15",
+     "p": 0.95
+    },
+    {
+     "type": "pay",
+     "debt": "D16",
+     "rule": "Jev says that M14 pays D16.",
+     "q": "pays_D16",
+     "p": 0.94
+    },
+    {
+     "type": "start",
+     "debt": "D17",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "q": "asks",
+     "p": 0.95
+    }
+   ],
+   "options": [
+    {
+     "id": "O1",
+     "from": "M1"
+    },
+    {
+     "id": "O2",
+     "from": "M2"
+    },
+    {
+     "id": "O3",
+     "from": "M8"
+    }
+   ],
+   "stage": "Close",
+   "stage_index": 2,
+   "stage_why": "The person asks to close.",
+   "check": {
+    "debt": "D15",
+    "persona": "Chair",
+    "q": "pays_D15",
+    "p": 0.95,
+    "done": true,
+    "text": "The Chair had to pay D15. It did."
+   },
+   "scores": {
+    "Interaction": {
+     "owed": 6,
+     "paid": 3,
+     "due": true
+    },
+    "Divergence": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Challenge": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Reflection": {
+     "owed": 5,
+     "paid": 5,
+     "due": true
+    },
+    "Progression": {
+     "owed": 1,
+     "paid": 1,
+     "due": true
+    },
+    "Resolution": {
+     "owed": 3,
+     "paid": 2,
+     "due": true
+    }
+   },
+   "board": [
+    {
+     "id": "D1",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 0,
+     "about": "M1 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 1,
+     "paid_by": "pays_D1",
+     "paid_p": 0.66,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D2",
+     "kind": "option",
+     "owner": "ai",
+     "start": 0,
+     "about": "Only one option is on the table. The ai owes a second option.",
+     "rule": "Only one option is on the table, so a second option is owed.",
+     "paid": 1,
+     "paid_by": "new_option",
+     "paid_p": 0.83,
+     "promise": "Divergence",
+     "status": "paid"
+    },
+    {
+     "id": "D3",
+     "kind": "answer",
+     "owner": "human",
+     "start": 1,
+     "about": "M2 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 2,
+     "paid_by": "pays_D3",
+     "paid_p": 0.67,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D4",
+     "kind": "end",
+     "owner": "both",
+     "start": 1,
+     "about": "M2 (ai) disagrees with the human. The disagreement must end.",
+     "rule": "A disagreement starts, so it must end before the talk closes.",
+     "paid": 10,
+     "paid_by": "pays_D4",
+     "paid_p": 0.85,
+     "promise": "Resolution",
+     "status": "paid"
+    },
+    {
+     "id": "D5",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 2,
+     "about": "M3 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 3,
+     "paid_by": "pays_D5",
+     "paid_p": 0.91,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D6",
+     "kind": "answer",
+     "owner": "human",
+     "start": 3,
+     "about": "M4 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D6",
+     "paid_p": 0.85,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D7",
+     "kind": "reason",
+     "owner": "human",
+     "start": 4,
+     "about": "M5 (human) makes a claim with no reason. The human owes a reason for it.",
+     "rule": "The person makes a claim with no reason, so the person owes a reason.",
+     "paid": 6,
+     "paid_by": "pays_D7",
+     "paid_p": 0.9,
+     "promise": "Challenge",
+     "status": "paid"
+    },
+    {
+     "id": "D8",
+     "kind": "answer",
+     "owner": "human",
+     "start": 5,
+     "about": "M6 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": 6,
+     "paid_by": "pays_D8",
+     "paid_p": 0.89,
+     "promise": "Interaction",
+     "status": "paid"
+    },
+    {
+     "id": "D9",
+     "kind": "weigh",
+     "owner": "ai",
+     "start": 6,
+     "about": "M7 (human) gives a reason. The ai owes a fair reply to that reason.",
+     "rule": "The person gives a reason, so the AI owes a fair reply to it.",
+     "paid": 7,
+     "paid_by": "pays_D9",
+     "paid_p": 0.92,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D10",
+     "kind": "reply",
+     "owner": "human",
+     "start": 7,
+     "about": "M8 (ai) puts a new option on the table. The human owes a reply to it.",
+     "rule": "The AI puts a new option on the table, so the person owes a reply to it.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D11",
+     "kind": "move_on",
+     "owner": "ai",
+     "start": 8,
+     "about": "M9 (human) repeats an earlier point with nothing new. The ai owes a new step.",
+     "rule": "The person repeats a point with no reason, and a reason was already asked for once. Asking again would go in a circle, so the AI owes a new step.",
+     "paid": 9,
+     "paid_by": "pays_D11",
+     "paid_p": 0.91,
+     "promise": "Progression",
+     "status": "paid"
+    },
+    {
+     "id": "D12",
+     "kind": "answer",
+     "owner": "human",
+     "start": 9,
+     "about": "M10 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    },
+    {
+     "id": "D13",
+     "kind": "record",
+     "owner": "ai",
+     "start": 10,
+     "about": "M11 (human) changes view. The ai owes a clear record of what is now agreed.",
+     "rule": "The person changes view, so the AI owes a record of what is now agreed.",
+     "paid": 11,
+     "paid_by": "pays_D13",
+     "paid_p": 0.96,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D14",
+     "kind": "end",
+     "owner": "both",
+     "start": 11,
+     "about": "M12 (ai) names a point that is still open. It must be settled.",
+     "rule": "An open point is named, so it must be settled before the talk closes.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Resolution",
+     "status": "due"
+    },
+    {
+     "id": "D15",
+     "kind": "summary",
+     "owner": "ai",
+     "start": 12,
+     "about": "M13 (human) asks to close. The ai owes a summary and a decision.",
+     "rule": "The person asks to close, so the AI owes a summary and a decision.",
+     "paid": 13,
+     "paid_by": "pays_D15",
+     "paid_p": 0.95,
+     "promise": "Resolution",
+     "status": "paid"
+    },
+    {
+     "id": "D16",
+     "kind": "record",
+     "owner": "ai",
+     "start": 12,
+     "about": "M13 (human) changes view. The ai owes a clear record of what is now agreed.",
+     "rule": "The person changes view, so the AI owes a record of what is now agreed.",
+     "paid": 13,
+     "paid_by": "pays_D16",
+     "paid_p": 0.94,
+     "promise": "Reflection",
+     "status": "paid"
+    },
+    {
+     "id": "D17",
+     "kind": "answer",
+     "owner": "human",
+     "start": 13,
+     "about": "M14 (ai) asks a question. The human owes an answer.",
+     "rule": "The AI asks a question, so the person owes an answer.",
+     "paid": null,
+     "paid_by": null,
+     "paid_p": null,
+     "promise": "Interaction",
+     "status": "due"
+    }
+   ]
+  }
+ ]
+}

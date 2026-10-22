@@ -1,0 +1,18 @@
+# The orb conda env. Create it from the repo root:
+#   conda env create -f environment.yml
+# On the first Mac the env was cloned from discuss-local and these packages were added (2026-10-21).
+name: orb
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - -e packages/python/orb-core
+      - -e packages/python/orb-discussion
+      - -e packages/python/orb-speech
+      - -e apps/agent
+      - pytest
+      - livekit        # the end-to-end voice test joins rooms with it
+      - livekit-api
+      - websockets

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orb-discussion"
+version = "0.1.0"
+description = "The discussion agent: Jev reads each message, debt rules choose the persona, a local LLM speaks."
+requires-python = ">=3.12"
+dependencies = ["orb-core>=0.1", "typesafe-sdk>=0.7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+orb_discussion = ["view_template.html"]

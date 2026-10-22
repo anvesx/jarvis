@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Debt Engine Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: stepper on top; left = the message and its Jev call (every question and answer); right = what the rules did, the decision, stage, promises; full-width debt board below; the rulebook at the end. Single light paper-and-ink look by choice. */
+:root {
+  --ink: #0A0A0A;
+  --ink-2: #1A1A1A;
+  --muted: #5C6066;
+  --muted-2: #8A8F96;
+  --rule: #E5E5E5;
+  --rule-2: #F0F0F0;
+  --paper: #FFFFFF;
+  --paper-2: #FAFAF8;
+  --paper-3: #F4F4F1;
+  --accent: #1E6FFF;
+  --accent-soft: #E8F0FF;
+  --warn: #C0392B;
+  --ok: #0A7C53;
+  --on-ink: #FFFFFF;
+  --on-ink-muted: #A9AEB5;
+  --accent-on-ink: #6FA2FF;
+  --line-on-ink: #2A2A2A;
+  --f-sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --f-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink); font-family: var(--f-sans); font-size: 15px; line-height: 1.5;
+  font-feature-settings: "tnum"; -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 48px 64px; display: grid; gap: 32px; }
+.wrap, .head, .col-l, .col-r, .msg, .block, .board, .bcol, .ref, .decision, .check, .call, .qgroup, .read { grid-template-columns: minmax(0, 1fr); }
+.eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+h1, h2, h3, h4 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+em.acc { font-family: var(--f-serif); font-style: italic; font-weight: 400; color: var(--accent); }
+code { font-family: var(--f-mono); font-size: 0.86em; background: var(--paper-3); padding: 0 4px; }
+
+.head { display: grid; gap: 12px; max-width: 820px; }
+.head h1 { font-size: clamp(30px, 4.6vw, 46px); font-weight: 500; letter-spacing: -0.025em; line-height: 1.08; }
+.lede { font-size: 17px; color: var(--ink-2); max-width: 68ch; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
+.stats div { padding: 12px 16px 12px 0; display: grid; gap: 2px; }
+.stats div + div { padding-left: 16px; border-left: 1px solid var(--rule); }
+.stats b { font-size: 28px; font-weight: 400; letter-spacing: -0.03em; }
+.stats span { font-size: 12px; color: var(--muted); }
+
+.rules { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--rule); }
+.rules li { padding: 16px 16px 16px 0; display: grid; gap: 8px; align-content: start; }
+.rules li + li { padding-left: 16px; border-left: 1px solid var(--rule); }
+.rules .num { font-family: var(--f-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.12em; }
+.rules h2 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.rules p { font-size: 14px; color: var(--muted); }
+
+.stepper {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper);
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding-block: 12px;
+  display: flex; align-items: center; gap: 12px;
+}
+.btn { font-family: var(--f-sans); font-size: 14px; font-weight: 500; padding: 8px 16px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); border-radius: 0; cursor: pointer; }
+.btn.primary { background: var(--ink); color: var(--on-ink); }
+.btn:disabled { border-color: var(--rule); color: var(--muted-2); background: var(--paper); cursor: default; }
+.btn:focus-visible, .tick:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ticks { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; flex: 1 1 0; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
+.tick { font-family: var(--f-mono); font-size: 11px; min-width: 40px; padding: 6px 4px; border: 1px solid var(--rule); background: var(--paper); color: var(--muted); border-radius: 0; cursor: pointer; }
+.tick.person { color: var(--ink); border-color: var(--muted-2); font-weight: 500; }
+.tick[aria-current="step"] { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+.stamp { font-family: var(--f-mono); font-size: 12px; color: var(--muted); letter-spacing: 0.08em; white-space: nowrap; }
+
+.main { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 48px; align-items: start; }
+.col-l, .col-r { display: grid; gap: 24px; min-width: 0; }
+.msg { display: grid; gap: 8px; }
+.msg blockquote { margin: 0; padding: 4px 0 4px 16px; border-left: 2px solid var(--ink); font-family: var(--f-serif); font-style: italic; font-size: 21px; line-height: 1.32; }
+.msg.ai blockquote { border-left-color: var(--muted-2); color: var(--ink-2); font-size: 17px; }
+.block { display: grid; gap: 12px; }
+
+/* the Jev call */
+.call { border: 1px solid var(--rule); display: grid; }
+.call-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 12px 16px; border-bottom: 1px solid var(--rule); background: var(--paper-2); }
+.call-head h3 { font-size: 16px; font-weight: 600; }
+.call-head .facts { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.qgroup { display: grid; padding: 12px 16px 4px; }
+.qgroup + .qgroup { border-top: 1px solid var(--rule); }
+.qgroup h4 { font-family: var(--f-mono); font-size: 11px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding-bottom: 4px; }
+.q { display: grid; grid-template-columns: minmax(0, 1fr) 112px 40px 44px; gap: 4px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--rule-2); }
+.q .lab { font-size: 14px; font-weight: 500; }
+.q .txt { font-size: 12px; color: var(--muted); }
+.q .fx { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.bar { position: relative; height: 8px; background: var(--paper-3); }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--muted-2); }
+.q.yes .bar i { background: var(--ink); }
+.bar b { position: absolute; left: 50%; top: -4px; bottom: -4px; width: 1px; background: var(--muted); }
+.val { font-family: var(--f-mono); font-size: 13px; text-align: right; }
+.verdict { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-2); text-align: right; }
+.q.yes .verdict { color: var(--ink); font-weight: 500; }
+.q.no .lab { color: var(--muted); font-weight: 400; }
+.chip { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 1px 6px; border: 1px solid currentColor; white-space: nowrap; }
+.chip.start { color: var(--ink); }
+.chip.pay { color: var(--ok); }
+.chip.option { color: var(--muted); }
+.call-foot { padding: 8px 16px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); }
+
+details.read { border: 1px solid var(--rule); }
+details.read summary { cursor: pointer; padding: 12px 16px; font-weight: 600; font-size: 14px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+details.read summary::-webkit-details-marker { display: none; }
+details.read summary span { font-family: var(--f-mono); font-size: 11px; font-weight: 400; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+details.read[open] summary { border-bottom: 1px solid var(--rule); }
+.read-body { padding: 8px 16px 16px; display: grid; gap: 12px; }
+.read-body h5 { margin: 0; font-family: var(--f-mono); font-size: 11px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.read-body ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.read-body li { font-size: 13px; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; padding: 4px 0; border-top: 1px solid var(--rule-2); }
+.read-body li .k { font-family: var(--f-mono); font-size: 12px; font-weight: 500; }
+.read-body .w { color: var(--muted); font-size: 12px; }
+
+/* right column */
+.events { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--rule); }
+.events li { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule-2); font-size: 14px; }
+.events .k { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding-top: 2px; }
+.k.start { color: var(--ink); } .k.pay { color: var(--ok); } .k.option { color: var(--muted); }
+.events .from { display: block; font-family: var(--f-mono); font-size: 11px; color: var(--muted); margin-top: 2px; }
+.none { font-size: 14px; color: var(--muted); }
+
+.decision { background: var(--ink); color: var(--on-ink); padding: 24px; display: grid; gap: 14px; }
+.decision .eyebrow { color: var(--on-ink-muted); }
+.drow { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: baseline; }
+.drow .lab { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-ink-muted); }
+.drow .v { font-size: 15px; }
+.persona { font-size: 26px; font-weight: 500; letter-spacing: -0.02em; }
+.persona em { font-family: var(--f-serif); font-style: italic; font-weight: 400; color: var(--accent-on-ink); }
+.old { border-top: 1px solid var(--line-on-ink); padding-top: 12px; font-size: 13px; color: var(--on-ink-muted); }
+.check { border: 1px solid var(--rule); padding: 16px; display: grid; gap: 8px; }
+.check .res { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+.res.ok { color: var(--ok); } .res.bad { color: var(--warn); }
+.check p { font-size: 15px; color: var(--ink-2); }
+.check .src { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+
+.track { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.track li { padding: 8px 0; border-bottom: 2px solid var(--rule); font-size: 14px; color: var(--muted-2); display: grid; gap: 2px; }
+.track li .t { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+.track li.on { border-bottom-color: var(--accent); color: var(--ink); font-weight: 500; }
+.track li.on .t { color: var(--accent); }
+.track li.past { border-bottom-color: var(--muted-2); color: var(--muted); }
+.why { font-size: 14px; color: var(--ink-2); }
+.opts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
+.opts .lab { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.opt { border: 1px solid var(--rule); padding: 2px 8px; }
+
+.prom-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+.pc { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 8px 12px; display: grid; gap: 2px; min-width: 0; }
+.pc .n { font-size: 14px; font-weight: 600; }
+.pc .s { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.pc .c { font-size: 13px; color: var(--ink-2); }
+.pc.notyet { background: var(--paper-2); }
+.pc.notyet .n { color: var(--muted); }
+.pc.notyet .s { color: var(--muted-2); }
+.pc.need { border-bottom: 2px solid var(--accent); padding-bottom: 7px; }
+.legend { font-size: 12px; color: var(--muted); }
+
+/* board */
+.board { display: grid; gap: 12px; }
+.board-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.bcol { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.bcol h3 { font-size: 14px; font-weight: 600; padding-bottom: 4px; border-bottom: 1px solid var(--ink); display: flex; justify-content: space-between; gap: 8px; }
+.bcol h3 .cnt { font-family: var(--f-mono); font-size: 12px; font-weight: 400; color: var(--muted); }
+.bcol .sub { font-size: 12px; color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 8px; }
+.debt { border: 1px solid var(--rule); background: var(--paper); padding: 8px 12px; display: grid; gap: 4px; align-content: start; }
+.debt .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.debt .id { font-family: var(--f-mono); font-size: 12px; font-weight: 500; }
+.debt .lbl { font-size: 14px; line-height: 1.35; }
+.debt .meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); }
+.tag { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 1px 6px; border: 1px solid currentColor; white-space: nowrap; }
+.tag.new { color: var(--ink); } .tag.paidnow { color: var(--ok); } .tag.next { color: var(--accent); } .tag.wait { color: var(--muted); }
+.debt.waiting { background: var(--paper-2); }
+.debt.waiting .lbl { color: var(--muted); }
+.debt.due { border-color: var(--muted-2); }
+.debt.chosen { border: 2px solid var(--accent); padding: 7px 11px; }
+.debt.paid .lbl { font-size: 13px; color: var(--muted); }
+.debt.paid .how { font-size: 12px; color: var(--ok); }
+.debt.fresh { animation: arrive 0.35s ease-out; }
+@keyframes arrive { from { background: var(--accent-soft); } to { background: var(--paper); } }
+.empty { font-size: 13px; color: var(--muted-2); padding: 8px 0; }
+
+/* rulebook */
+.ref { display: grid; gap: 24px; border-top: 1px solid var(--ink); padding-top: 24px; }
+.ref h2 { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
+.ref-grid { display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 48px; align-items: start; }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-family: var(--f-mono); font-size: 11px; font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
+td { padding: 8px 12px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td.p { font-weight: 600; white-space: nowrap; }
+td.m { font-family: var(--f-mono); font-size: 12px; }
+td.no { font-family: var(--f-mono); font-size: 12px; color: var(--muted-2); }
+.small { font-size: 13px; color: var(--muted); max-width: 80ch; }
+.small strong { color: var(--ink-2); }
+.notes { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; color: var(--ink-2); max-width: 90ch; }
+.method { font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 12px; max-width: 100ch; }
+
+@media (max-width: 960px) {
+  .main, .ref-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .rules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rules li:nth-child(3) { padding-left: 0; border-left: 0; }
+  .rules li:nth-child(n+3) { border-top: 1px solid var(--rule); }
+}
+@media (max-width: 640px) {
+  .wrap { padding-block: 24px 48px; gap: 24px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .stats div:nth-child(n+3) { border-top: 1px solid var(--rule); }
+  .rules { grid-template-columns: minmax(0, 1fr); }
+  .rules li, .rules li + li { padding: 12px 0; border-left: 0; }
+  .rules li + li { border-top: 1px solid var(--rule); }
+  .board-cols { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .q { grid-template-columns: minmax(0, 1fr) 40px 44px; }
+  .q .qtext { grid-column: 1 / -1; }
+  .drow { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .events li { grid-template-columns: 72px minmax(0, 1fr); }
+  .stamp, .long { display: none; }
+  .stepper { gap: 8px; }
+  .msg blockquote { font-size: 19px; }
+}
+@media (prefers-reduced-motion: reduce) { .debt.fresh { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div class="eyebrow">Debt engine · live Jev run</div>
+    <h1>Every Jev call, and what it <em class="acc">decides</em></h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <ol class="rules" aria-label="How one message is handled">
+    <li><span class="num">Step 1</span><h2>Jev answers</h2><p>One call for each message. Only yes/no questions. Each answer is a number from 0 to 1, and 0.5 or more counts as yes.</p></li>
+    <li><span class="num">Step 2</span><h2>The rules start and pay debts</h2><p>A question owes an answer. A claim owes a reason. A reason owes a fair reply. A new option owes a reply.</p></li>
+    <li><span class="num">Step 3</span><h2>The stage sets the target</h2><p>Open: 1 option. Test: 2 or more. Close: the person asks to close, or only closing debts are left.</p></li>
+    <li><span class="num">Step 4</span><h2>The need picks the persona</h2><p>The newest due debt that the AI can act on. Its promise picks the persona.</p></li>
+  </ol>
+
+  <nav class="stepper" aria-label="Messages of the chat">
+    <button class="btn" id="prev" type="button">Back</button>
+    <ol class="ticks" id="ticks"></ol>
+    <button class="btn primary" id="next" type="button">Next<span class="long"> message</span></button>
+    <span class="stamp" id="stamp"></span>
+  </nav>
+
+  <main class="main">
+    <div class="col-l">
+      <section class="msg" id="msg">
+        <div class="eyebrow" id="who"></div>
+        <blockquote id="text"></blockquote>
+      </section>
+      <section class="call" id="call" aria-label="The Jev call for this message"></section>
+      <details class="read" id="read"><summary>What Jev read for this call <span>open</span></summary><div class="read-body" id="readbody"></div></details>
+    </div>
+    <div class="col-r">
+      <section class="block">
+        <div class="eyebrow">What the rules did with the answers</div>
+        <ul class="events" id="events"></ul>
+      </section>
+      <section id="verdict"></section>
+      <section class="block">
+        <div class="eyebrow">Stage</div>
+        <ol class="track" id="track"></ol>
+        <p class="why" id="stagewhy"></p>
+        <div class="opts" id="opts"></div>
+      </section>
+      <section class="block">
+        <div class="eyebrow">The six promises</div>
+        <div class="prom-grid" id="prom"></div>
+        <p class="legend">Target: the promise is due in this stage, or not yet. Score: debts paid of debts owed. The blue line marks the promise of the need.</p>
+      </section>
+    </div>
+  </main>
+
+  <section class="board" aria-label="The debt board">
+    <div class="eyebrow">The debt board after this message</div>
+    <div class="board-cols">
+      <div class="bcol"><h3>Waiting <span class="cnt" id="cw"></span></h3><p class="sub">exists, but its stage has not come</p><div class="cards" id="colw"></div></div>
+      <div class="bcol"><h3>Due now <span class="cnt" id="cd"></span></h3><p class="sub">must be paid in this stage</p><div class="cards" id="cold"></div></div>
+      <div class="bcol"><h3>Paid <span class="cnt" id="cp"></span></h3><p class="sub">newest first</p><div class="cards" id="colp"></div></div>
+    </div>
+    <p class="legend">A blue frame marks the need: the debt that the AI pays next. "Person owes" means the AI can only ask for it, or wait.</p>
+  </section>
+
+  <section class="ref" aria-labelledby="ref-h">
+    <div class="eyebrow">The rulebook</div>
+    <h2 id="ref-h">The fixed rules that turn Jev's answers into decisions</h2>
+    <div class="ref-grid">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Debt</th><th>Promise</th><th>Starts when</th><th>Paid when</th><th>Who acts</th></tr></thead>
+          <tbody>
+            <tr><td class="m">answer</td><td class="p">Interaction</td><td>someone asks a question</td><td>the other side answers it</td><td>Teacher, when the AI owes it. When the person owes it, the AI waits.</td></tr>
+            <tr><td class="m">reply</td><td class="p">Interaction</td><td>the AI puts a new option on the table</td><td>the person accepts it, rejects it with a reason, or compares it</td><td>The AI waits for the person.</td></tr>
+            <tr><td class="m">option</td><td class="p">Divergence</td><td>only one option is on the table</td><td>a second option comes</td><td>Rival</td></tr>
+            <tr><td class="m">reason</td><td class="p">Challenge</td><td>the person makes a claim with no reason</td><td>the person gives the reason</td><td>Examiner asks for it</td></tr>
+            <tr><td class="m">weigh</td><td class="p">Reflection</td><td>the person gives a reason</td><td>the AI accepts it, or answers it with a better reason</td><td>Judge</td></tr>
+            <tr><td class="m">record</td><td class="p">Reflection</td><td>the person changes view</td><td>the AI states what is now agreed</td><td>Judge</td></tr>
+            <tr><td class="m">move_on</td><td class="p">Progression</td><td>the person repeats with no reason, after a reason was already asked for once</td><td>the AI names the repeat and takes a new step</td><td>Navigator</td></tr>
+            <tr><td class="m">end</td><td class="p">Resolution</td><td>someone disagrees, or names an open point</td><td>one side accepts, or a decision is made</td><td>Chair</td></tr>
+            <tr><td class="m">summary</td><td class="p">Resolution</td><td>the person asks to close</td><td>the AI sums up or decides</td><td>Chair</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Promise</th><th>Open</th><th>Test</th><th>Close</th></tr></thead>
+          <tbody id="duetable"></tbody>
+        </table>
+      </div>
+    </div>
+    <p class="small"><strong>How the need is picked.</strong> From the due debts that the AI can act on, take the one that the newest message started. If one message started several, the fixed order is Resolution, Reflection, Progression, Challenge, Interaction, Divergence. If the newest message started none, take the oldest due debt.</p>
+    <p class="small"><strong>How the stage is found.</strong> Open: fewer than 2 options. Test: 2 or more options. Close: the person asks to close, or only closing debts are left. The stage never goes back.</p>
+    <div class="block">
+      <div class="eyebrow">Known weak points in this run</div>
+      <ul class="notes" id="notes"></ul>
+    </div>
+    <p class="method" id="method"></p>
+  </section>
+</div>
+
+<script>
+const RUN = __RUN_DATA__;
+const RB = RUN.rulebook;
+const STEPS = RUN.steps;
+const N = STEPS.length;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const code = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+const M = (seq) => "M" + (seq + 1);
+const fmt = (n) => Number(n).toLocaleString("en-US");
+const PROMISE_TEXT = {
+  Interaction: "Reply to the other side", Divergence: "More than one option", Challenge: "A reason for each claim",
+  Reflection: "Change only for a reason", Progression: "No repeats, no stuck points", Resolution: "Close the points"
+};
+const OWNER = { human: "Person owes", ai: "AI owes", both: "Both sides" };
+let cur = 1;
+
+function debtLabel(b) {
+  const m = M(b.start);
+  return {
+    answer: `Answer ${m}'s question`,
+    reply: `Reply to ${m}'s new option`,
+    option: "A second option",
+    reason: `A reason for ${m}'s claim`,
+    weigh: `A fair reply to ${m}'s reason`,
+    record: `A record of what ${m} changed`,
+    move_on: `A new step after ${m}'s repeat`,
+    end: b.about.includes("open") ? `Settle the open point from ${m}` : `End the disagreement from ${m}`,
+    summary: `A summary and a decision (${m} asks)`
+  }[b.kind];
+}
+
+function header() {
+  const people = STEPS.filter((s) => s.speaker === "human").length;
+  $("lede").textContent = `The chat "${RUN.topic}", replayed one message at a time with live Jev calls. At each message the engine sees only the messages so far, as in a live chat. Jev answers yes/no questions. The rules turn the answers into debts, the stage, the target, the score and the need. ${people} person messages pick a persona for the next AI reply.`;
+  const qs = STEPS.reduce((a, s) => a + s.call.questions.length, 0);
+  $("stats").innerHTML = [
+    [N, "Jev calls, one per message"], [qs, "questions in total"],
+    [RUN.seconds.toFixed(1) + " s", "Jev time for the whole chat"], [fmt(RUN.tokens), `input tokens, about $${RUN.cost_usd}`]
+  ].map(([b, t]) => `<div><b>${b}</b><span>${t}</span></div>`).join("");
+  $("method").textContent = `Run of ${RUN.ran_at}, model ${RUN.model}, saved chat ${RUN.chat}. Code: debt/questions.py (what Jev reads and the questions), debt/rules.py (the rulebook), debt/engine.py (one step for each message), debt/run.py (this replay), debt/view.py (this page). The "old app" line shows the persona that the earlier setup picked for the same message.`;
+  $("duetable").innerHTML = RB.promises.map((p) => `<tr><td class="p">${p}</td>${RB.stages.map((g) => RB.due[g].includes(p) ? '<td class="m">Due</td>' : '<td class="no">Not yet</td>').join("")}</tr>`).join("");
+  const notes = [];
+  STEPS.forEach((s) => s.events.forEach((e) => {
+    if (e.type === "start" && e.q === "changes_view" && s.text.length < 80 && /decide|summar/i.test(s.text))
+      notes.push(`${s.id}: Jev answered "changes view" with ${e.p.toFixed(2)} for "${s.text}". This started ${e.debt} by mistake. The Chair still won, because of the fixed order.`);
+  }));
+  const last = STEPS[N - 1];
+  const open = last.board.filter((b) => b.status !== "paid");
+  if (open.length) notes.push(`At the end, ${open.length} debts are still open: ${open.map((b) => b.id + " (" + debtLabel(b) + ")").join(", ")}. The chat stops before the person replies.`);
+  notes.push("Options are shown as the text of the message that proposed them, because Jev picks answers but does not write labels.");
+  notes.push("This is one chat. The rules still need a test on all the saved chats.");
+  $("notes").innerHTML = notes.map((n) => `<li>${esc(n)}</li>`).join("");
+}
+
+function renderCall(s) {
+  const fx = {};
+  s.events.forEach((e) => { (fx[e.q] = fx[e.q] || []).push(e); });
+  const row = (q) => {
+    const chips = (fx[q.name] || []).map((e) => e.type === "start" ? `<span class="chip start">starts ${e.debt}</span>`
+      : e.type === "pay" ? `<span class="chip pay">pays ${e.debt}</span>` : `<span class="chip option">new option ${e.option}</span>`).join("");
+    const pct = Math.round(q.answer * 100);
+    return `<div class="q ${q.yes ? "yes" : "no"}"><div class="qtext"><div class="lab">${esc(q.label)}</div><div class="txt">${code(q.text)}</div>${chips ? `<div class="fx">${chips}</div>` : ""}</div>
+      <div class="bar" role="img" aria-label="${q.answer.toFixed(2)}"><i style="width:${pct}%"></i><b></b></div>
+      <div class="val">${q.answer.toFixed(2)}</div><div class="verdict">${q.yes ? "Yes" : "No"}</div></div>`;
+  };
+  const groups = [["message", "About the new message"], ["pay", "Does it pay an open debt?"], ["check", "Check of the AI reply"]];
+  const body = groups.map(([g, title]) => {
+    const qs = s.call.questions.filter((q) => q.group === g);
+    return qs.length ? `<div class="qgroup"><h4>${title}</h4>${qs.map(row).join("")}</div>` : "";
+  }).join("");
+  $("call").innerHTML = `<div class="call-head"><h3>The Jev call for ${s.id}</h3><span class="facts">${s.call.questions.length} questions · ${s.call.seconds.toFixed(2)} s · ${fmt(s.call.tokens)} tokens</span></div>${body}
+    <div class="call-foot">The bar shows Jev's answer from 0 to 1. The thin line marks 0.5. At 0.5 or more, the answer counts as yes. A tag shows what that answer caused.</div>`;
+
+  const st = s.call.state;
+  const list = (obj, f) => Object.keys(obj).length ? `<ul>${Object.entries(obj).map(([k, v]) => `<li><span class="k">${k}</span><span>${f(v)}</span></li>`).join("")}</ul>` : '<p class="none">None</p>';
+  $("readbody").innerHTML = `<h5>Topic</h5><p>${esc(st.topic)}</p>
+    <h5>Options on the table</h5>${list(st.options, (v) => esc(v))}
+    <h5>Open debts</h5>${list(st.open_debts, (v) => esc(v))}
+    <h5>Earlier messages in view</h5>${list(st.earlier_messages, (v) => `${esc(v.text)} <span class="w">· ${v.speaker} · ${esc(v.why_shown)}</span>`)}
+    <h5>New message</h5><ul><li><span class="k">${st.new_message.id}</span><span>${esc(st.new_message.text)} <span class="w">· ${st.new_message.speaker}</span></span></li></ul>`;
+}
+
+function render(i, animate) {
+  cur = i;
+  const s = STEPS[i - 1];
+  $("who").textContent = `${s.id} · ${s.speaker === "human" ? "Person" : "AI reply"}`;
+  $("msg").className = "msg" + (s.speaker === "ai" ? " ai" : "");
+  $("text").textContent = s.text;
+  renderCall(s);
+
+  const KIND = { start: "Started", pay: "Paid", option: "Option" };
+  $("events").innerHTML = s.events.length ? s.events.map((e) => {
+    const b = s.board.find((x) => x.id === e.debt);
+    const what = e.type === "option" ? `${e.option} is on the table` : `${e.debt} · ${debtLabel(b)}`;
+    return `<li><span class="k ${e.type}">${KIND[e.type]}</span><span><strong>${esc(what)}</strong>. ${esc(e.rule)}<span class="from">from ${e.q} = ${e.p.toFixed(2)}</span></span></li>`;
+  }).join("") : '<li><span class="k">None</span><span class="none">No answer crossed 0.5 in a way that changes a debt.</span></li>';
+
+  if (s.need) {
+    const n = s.need, b = n.debt ? s.board.find((x) => x.id === n.debt) : null;
+    const old = n.old_persona ? `<div class="old">The old app chose: The ${esc(n.old_persona)}. ${n.old_persona === n.persona ? "Same result." : "Different result."}</div>` : "";
+    $("verdict").innerHTML = `<div class="decision"><div class="eyebrow">The need, for the AI's next reply</div>
+      <div class="drow"><span class="lab">Need</span><span class="v">${b ? `<strong>${b.id}</strong> · ${esc(debtLabel(b))}` : "No due debt"}</span></div>
+      <div class="drow"><span class="lab">Why</span><span class="v">${esc(n.why)}</span></div>
+      <div class="drow"><span class="lab">Persona</span><span class="persona">The <em>${esc(n.persona)}</em></span></div>
+      <div class="drow"><span class="lab">Its move</span><span class="v">${esc(n.move)}</span></div>${old}</div>`;
+  } else if (s.check) {
+    const c = s.check;
+    $("verdict").innerHTML = `<div class="check"><div class="eyebrow">Check: did the reply do its job?</div>
+      <span class="res ${c.done ? "ok" : "bad"}">${c.done ? "Yes" : "No"}</span><p>${esc(c.text)}</p>
+      ${c.q ? `<span class="src">from ${c.q} = ${(c.p ?? 0).toFixed(2)}</span>` : ""}</div>`;
+  } else {
+    $("verdict").innerHTML = "";
+  }
+
+  const desc = { Open: "collect options", Test: "ask why, weigh reasons", Close: "decide" };
+  $("track").innerHTML = RB.stages.map((g, k) => `<li class="${k === s.stage_index ? "on" : k < s.stage_index ? "past" : ""}"><span class="t">${g}</span><span>${desc[g]}</span></li>`).join("");
+  $("stagewhy").textContent = s.stage_why;
+  $("opts").innerHTML = '<span class="lab">Options</span>' + (s.options.length ? s.options.map((o) => `<span class="opt">${o.id} from ${o.from}</span>`).join("") : '<span class="none">none yet</span>');
+
+  const needP = s.need && s.need.debt ? s.need.promise : null;
+  $("prom").innerHTML = RB.promises.map((p) => {
+    const v = s.scores[p];
+    const score = v.owed ? `Score: ${v.paid} of ${v.owed} paid` : "Score: no debts yet";
+    return `<div class="pc ${v.due ? "due" : "notyet"}${p === needP ? " need" : ""}"><span class="n">${p}</span><span class="c">${PROMISE_TEXT[p]}</span><span class="s">Target: ${v.due ? "due" : "not yet"}</span><span class="c">${score}</span></div>`;
+  }).join("");
+
+  const started = new Set(s.events.filter((e) => e.type === "start").map((e) => e.debt));
+  const paidNow = new Set(s.events.filter((e) => e.type === "pay").map((e) => e.debt));
+  const needId = s.need ? s.need.debt : null;
+  const card = (b) => {
+    const tag = b.id === needId ? '<span class="tag next">Need</span>' : started.has(b.id) ? '<span class="tag new">New</span>' : paidNow.has(b.id) ? '<span class="tag paidnow">Paid now</span>' : "";
+    const fresh = animate && (started.has(b.id) || paidNow.has(b.id)) ? " fresh" : "";
+    if (b.status === "paid") {
+      return `<div class="debt paid${fresh}"><div class="top"><span class="id">${b.id}</span>${tag}</div><div class="lbl">${esc(debtLabel(b))}</div><div class="how">paid by ${M(b.paid)} · ${b.paid_by} = ${(b.paid_p ?? 0).toFixed(2)}</div></div>`;
+    }
+    return `<div class="debt ${b.status}${b.id === needId ? " chosen" : ""}${fresh}"><div class="top"><span class="id">${b.id}</span>${tag}</div><div class="lbl">${esc(debtLabel(b))}</div><div class="meta"><span>${OWNER[b.owner]}</span><span>${b.promise}</span></div></div>`;
+  };
+  const col = (st) => s.board.filter((b) => b.status === st);
+  const w = col("waiting"), d = col("due"), p = col("paid").sort((a, b) => b.paid - a.paid || b.start - a.start);
+  $("colw").innerHTML = w.length ? w.map(card).join("") : '<p class="empty">None</p>';
+  $("cold").innerHTML = d.length ? d.map(card).join("") : '<p class="empty">None</p>';
+  $("colp").innerHTML = p.length ? p.map(card).join("") : '<p class="empty">None</p>';
+  $("cw").textContent = w.length; $("cd").textContent = d.length; $("cp").textContent = p.length;
+
+  document.querySelectorAll(".tick").forEach((t, k) => { if (k + 1 === i) t.setAttribute("aria-current", "step"); else t.removeAttribute("aria-current"); });
+  const tk = document.querySelector('.tick[aria-current="step"]'), row = $("ticks");
+  if (tk) row.scrollLeft = Math.max(0, tk.offsetLeft - row.offsetLeft - row.clientWidth / 2 + tk.offsetWidth / 2);
+  $("prev").disabled = i === 1;
+  $("next").disabled = i === N;
+  $("stamp").textContent = `${String(i).padStart(2, "0")} · ${N}`;
+  try { localStorage.setItem("debtrun-step", String(i)); } catch (e) {}
+  try { if (location.hash !== "#m" + i) history.replaceState(null, "", "#m" + i); } catch (e) {}
+}
+
+header();
+$("ticks").innerHTML = STEPS.map((s, k) => `<li><button type="button" class="tick${s.speaker === "human" ? " person" : ""}" data-s="${k + 1}" aria-label="Message ${k + 1}, ${s.speaker === "human" ? "person" : "AI"}">${s.id}</button></li>`).join("");
+$("ticks").addEventListener("click", (e) => { const b = e.target.closest(".tick"); if (b) render(Number(b.dataset.s), true); });
+$("prev").addEventListener("click", () => { if (cur > 1) render(cur - 1, true); });
+$("next").addEventListener("click", () => { if (cur < N) render(cur + 1, true); });
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest("input, textarea, summary")) return;
+  if (e.key === "ArrowRight" && cur < N) render(cur + 1, true);
+  if (e.key === "ArrowLeft" && cur > 1) render(cur - 1, true);
+});
+let start = 1;
+const h = /^#m(\d+)$/.exec(location.hash);
+if (h && Number(h[1]) >= 1 && Number(h[1]) <= N) start = Number(h[1]);
+else { try { const v = Number(localStorage.getItem("debtrun-step")); if (v >= 1 && v <= N) start = v; } catch (e) {} }
+render(start, false);
+</script>
+</body>
+</html>

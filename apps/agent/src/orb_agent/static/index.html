@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>orb · discussion agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>try { if (localStorage.getItem("orb-theme") === "light") document.documentElement.dataset.theme = "light"; } catch (e) {}</script>
+<style>
+/* Layout: chat on the left (log, composer, voice bar); the engine's view on the right (next move, promises, debts, last Jev call).
+   Dark by default: cool near-black surfaces, one blue accent. A light theme is one click away (data-theme="light"). */
+:root {
+  color-scheme: dark;
+  --bg: #0F1115; --surface: #151821; --card: #1A1E28; --field: #12151C;
+  --ink: #E8EAEE; --ink-2: #C3C8D1; --muted: #8E95A1; --muted-2: #5F6673;
+  --rule: #262B36; --rule-2: #1D212B; --line-strong: #3A4150;
+  --accent: #6EA8FF; --accent-soft: #172440; --warn: #FF7A6E; --ok: #4ADE9B;
+  --primary-bg: #6EA8FF; --primary-fg: #0B1220;
+  --f-sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --f-serif: 'Source Serif 4', Georgia, serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #FFFFFF; --surface: #FAFAF8; --card: #FFFFFF; --field: #FFFFFF;
+  --ink: #0A0A0A; --ink-2: #1A1A1A; --muted: #5C6066; --muted-2: #8A8F96;
+  --rule: #E5E5E5; --rule-2: #F0F0F0; --line-strong: #0A0A0A;
+  --accent: #1E6FFF; --accent-soft: #E8F0FF; --warn: #C0392B; --ok: #0A7C53;
+  --primary-bg: #0A0A0A; --primary-fg: #FFFFFF;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-sans); font-size: 15px; line-height: 1.5;
+       font-feature-settings: "tnum"; -webkit-font-smoothing: antialiased; }
+[hidden] { display: none !important; }
+button, input, textarea { font: inherit; color: inherit; }
+::selection { background: var(--accent-soft); color: var(--ink); }
+.eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.wrap { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 12px 24px; border-bottom: 1px solid var(--line-strong); background: var(--bg); }
+header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+header h1 em { font-family: var(--f-serif); font-weight: 400; color: var(--accent); }
+#topicline { flex: 1 1 280px; min-width: 0; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip { font-family: var(--f-mono); font-size: 11px; padding: 2px 8px; border: 1px solid var(--rule); color: var(--muted); background: transparent; }
+.chip.ok { color: var(--ok); border-color: currentColor; }
+.chip.bad { color: var(--warn); border-color: currentColor; }
+button.chip { cursor: pointer; }
+button.chip:hover { color: var(--ink); border-color: var(--muted-2); }
+main { min-height: 0; display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+#chat { min-height: 0; display: grid; grid-template-rows: 1fr auto auto; border-right: 1px solid var(--rule); background: var(--bg); }
+#log { overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.msg { max-width: 72ch; display: grid; gap: 4px; }
+.msg .who { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.msg .who b { color: var(--accent); font-weight: 500; }
+.msg .text { white-space: pre-wrap; }
+.msg.human .text { padding-left: 12px; border-left: 2px solid var(--ink-2); }
+.msg.ai .text { padding-left: 12px; border-left: 2px solid var(--accent); color: var(--ink-2); }
+.msg .cut { color: var(--warn); }
+.note { color: var(--muted); font-size: 13px; }
+.err { color: var(--warn); font-size: 14px; }
+#start { padding: 48px 24px; display: grid; gap: 16px; align-content: start; max-width: 720px; }
+#start h2 { margin: 0; font-size: 32px; font-weight: 500; letter-spacing: -.025em; line-height: 1.1; }
+#start h2 em { font-family: var(--f-serif); font-weight: 400; color: var(--accent); }
+#start p { margin: 0; color: var(--ink-2); max-width: 62ch; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > input { flex: 1 1 320px; min-width: 0; }
+input[type=text], textarea { border: 1px solid var(--line-strong); background: var(--field); color: var(--ink); padding: 8px 12px; border-radius: 0; }
+input::placeholder, textarea::placeholder { color: var(--muted-2); }
+input[type=text]:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn { padding: 8px 16px; border: 1px solid var(--line-strong); background: var(--card); color: var(--ink); cursor: pointer; border-radius: 0; font-weight: 500; }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn.primary { background: var(--primary-bg); border-color: var(--primary-bg); color: var(--primary-fg); }
+.btn:disabled { border-color: var(--rule); color: var(--muted-2); background: var(--surface); cursor: default; }
+.btn.live { background: var(--accent); border-color: var(--accent); color: var(--primary-fg); }
+.examples { display: flex; gap: 8px; flex-wrap: wrap; }
+.examples button { border: 1px solid var(--rule); background: var(--surface); padding: 4px 10px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
+.examples button:hover { border-color: var(--muted-2); color: var(--ink); }
+#composer { border-top: 1px solid var(--rule); padding: 12px 24px; display: flex; gap: 8px; align-items: flex-end; }
+#composer textarea { flex: 1; min-width: 0; resize: none; height: 64px; }
+#voicebar { border-top: 1px solid var(--rule); padding: 8px 24px; display: flex; gap: 12px; align-items: center; font-size: 14px; color: var(--ink-2); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); flex: none; }
+.dot.listen { background: var(--ok); } .dot.you { background: var(--ink); } .dot.agent { background: var(--accent); }
+#side { min-height: 0; overflow-y: auto; padding: 24px; display: grid; gap: 28px; align-content: start; background: var(--surface); }
+#side section { display: grid; gap: 10px; }
+.persona { font-size: 26px; font-weight: 500; letter-spacing: -.02em; }
+.persona em { font-family: var(--f-serif); font-weight: 400; color: var(--accent); }
+.kv { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
+.kv .k { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.track { display: grid; grid-template-columns: repeat(3, 1fr); }
+.track span { padding: 4px 0; border-bottom: 2px solid var(--rule); font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-2); }
+.track span.on { border-bottom-color: var(--accent); color: var(--accent); }
+.track span.past { border-bottom-color: var(--muted-2); color: var(--muted); }
+.check { font-size: 14px; padding-left: 10px; border-left: 2px solid var(--rule); }
+.check.yes { border-left-color: var(--ok); } .check.no { border-left-color: var(--warn); }
+.prom { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); background: var(--card); }
+.prom div { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 6px 10px; display: grid; gap: 1px; min-width: 0; }
+.prom b { font-size: 13px; font-weight: 600; }
+.prom span { font-size: 12px; color: var(--muted); }
+.prom .s { font-family: var(--f-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+.prom .no-due { background: var(--surface); } .prom .no-due .s, .prom .no-due b { color: var(--muted-2); }
+.prom .need { box-shadow: inset 0 -2px 0 var(--accent); }
+.debts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.debts h3 { margin: 0 0 4px; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--line-strong); display: flex; justify-content: space-between; }
+.debts h3 span { font-family: var(--f-mono); font-weight: 400; color: var(--muted); }
+.debt { border: 1px solid var(--rule); background: var(--card); padding: 6px 8px; font-size: 12px; display: grid; gap: 2px; margin-bottom: 6px; }
+.debt .id { font-family: var(--f-mono); font-size: 11px; font-weight: 500; }
+.debt .who2 { color: var(--muted); font-size: 11px; }
+.debt.need { border: 2px solid var(--accent); padding: 5px 7px; background: var(--accent-soft); }
+.debt.paid { color: var(--muted); }
+.qs { display: grid; gap: 3px; font-size: 13px; }
+.q { display: grid; grid-template-columns: minmax(0, 1fr) 64px 34px; gap: 8px; align-items: center; }
+.q .bar { height: 6px; background: var(--rule-2); position: relative; }
+.q .bar i { position: absolute; inset: 0 auto 0 0; background: var(--muted-2); }
+.q.yes .bar i { background: var(--accent); }
+.q .yn { font-family: var(--f-mono); font-size: 11px; color: var(--muted); text-align: right; }
+.q.yes .yn { color: var(--accent); }
+.small { font-size: 12px; color: var(--muted); }
+table.t { border-collapse: collapse; font-size: 13px; }
+table.t td { padding: 2px 12px 2px 0; }
+#log, #side { scrollbar-color: var(--line-strong) transparent; }
+@media (max-width: 900px) {
+  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; overflow-y: auto; }
+  #chat { border-right: 0; } #log { max-height: 60vh; } #side { overflow: visible; }
+  .debts { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>orb <em>discussion</em></h1>
+    <span id="topicline" class="small"></span>
+    <div class="chips"><span class="chip" id="c-llm">LLM</span><span class="chip" id="c-voice">Voice</span><button class="chip" id="theme" type="button" title="Switch the theme">Light</button></div>
+  </header>
+  <main>
+    <section id="chat">
+      <div id="start">
+        <div class="eyebrow">New discussion</div>
+        <h2>An AI partner that does not just <em>agree</em></h2>
+        <p>Name a topic. Jev reads every message, the debt rules choose a persona for each reply, and a local model speaks. You can type, or talk.</p>
+        <div class="row"><input type="text" id="topic" placeholder="Should our personal assistant store user passwords?" maxlength="2000"><button class="btn primary" id="go" type="button">Start</button></div>
+        <div class="examples" id="examples"></div>
+      </div>
+      <div id="log" hidden></div>
+      <form id="composer" hidden>
+        <textarea id="text" placeholder="Your message. Enter sends it, Shift+Enter adds a line." maxlength="8000"></textarea>
+        <button class="btn primary" id="send" type="submit">Send</button>
+        <button class="btn" id="talk" type="button">Talk</button>
+      </form>
+      <div id="voicebar" hidden><span class="dot" id="vdot"></span><span id="vtext">Voice is off.</span></div>
+    </section>
+    <aside id="side">
+      <section><div class="eyebrow">Next move</div><div id="move" class="small">Start a discussion to see what the engine decides.</div></section>
+      <section><div class="eyebrow">Six promises · due now = target · paid of owed = score</div><div class="prom" id="prom"></div></section>
+      <section><div class="eyebrow">Debts</div><div class="debts" id="debts"></div></section>
+      <section><div class="eyebrow">Last Jev call</div><div id="call" class="small">No call yet.</div></section>
+      <section><div class="eyebrow">Timing and cost</div><div id="timing" class="small">No turn yet.</div></section>
+    </aside>
+  </main>
+</div>
+<script src="/static/vendor/livekit-client.umd.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const PROMISES = ["Interaction", "Divergence", "Challenge", "Reflection", "Progression", "Resolution"];
+const WORDS = {Interaction: "Reply to the other side", Divergence: "More than one option", Challenge: "A reason for each claim",
+               Reflection: "Change only for a reason", Progression: "No repeats, no stuck points", Resolution: "Close the points"};
+const EXAMPLES = ["Should our personal assistant store user passwords?", "Which language should we use for our new backend?",
+                  "Should a small CA firm move its client files to the cloud?"];
+let S = null, busy = false, room = null, poll = null, streaming = null;
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, {headers: {"content-type": "application/json"}, ...opts});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+  return data;
+}
+
+async function health() {
+  try {
+    const h = await api("/health");
+    const llm = h.agents?.discussion?.llm;
+    $("c-llm").textContent = llm?.ok ? `LLM ${llm.model}` : "LLM not ready";
+    $("c-llm").className = "chip " + (llm?.ok ? "ok" : "bad");
+    $("c-voice").textContent = h.voice ? (h.voice.dev ? "Voice: local dev" : "Voice on") : "Voice off";
+    $("c-voice").className = "chip " + (h.voice ? "ok" : "bad");
+    $("talk").disabled = !h.voice;
+  } catch (e) { $("c-llm").textContent = "Server not reachable"; $("c-llm").className = "chip bad"; }
+}
+
+function showChat() {
+  $("start").hidden = true; $("log").hidden = false; $("composer").hidden = false; $("voicebar").hidden = false;
+  $("topicline").textContent = S.title + (S.source?.title ? ` · source: ${S.source.title}` : "") + (S.source?.error ? ` · the link did not load: ${S.source.error}` : "");
+}
+
+async function startSession(topic) {
+  try {
+    S = await api("/v1/sessions", {method: "POST", body: JSON.stringify({topic})});
+    history.replaceState(null, "", "?s=" + encodeURIComponent(S.id));
+    showChat(); render(); $("text").focus();
+  } catch (e) { alertLine(`The session did not start: ${e.message}`); }
+}
+
+async function loadSession(id) {
+  try { S = await api("/v1/sessions/" + encodeURIComponent(id)); showChat(); render(); }
+  catch (e) { history.replaceState(null, "", "/"); }
+}
+
+function alertLine(text) {
+  const d = document.createElement("div"); d.className = "err"; d.textContent = text;
+  ($("log").hidden ? $("start") : $("log")).appendChild(d); $("log").scrollTop = 1e9;
+}
+
+async function send(text) {
+  if (busy || !text.trim() || !S) return;
+  busy = true; $("send").disabled = true;
+  streaming = {human: text, ai: "", persona: null};
+  render();
+  try {
+    const r = await fetch(`/v1/sessions/${encodeURIComponent(S.id)}/turns`, {method: "POST", headers: {"content-type": "application/json"},
+                          body: JSON.stringify({text, channel: "web"})});
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
+    const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
+    for (;;) {
+      const {value, done} = await reader.read(); if (done) break;
+      buf += dec.decode(value, {stream: true});
+      let i; while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i); buf = buf.slice(i + 1); if (!line.trim()) continue;
+        const ev = JSON.parse(line);
+        if (ev.type === "decision") { streaming.persona = ev.data.name; renderLog(); }
+        else if (ev.type === "token") { streaming.ai += ev.data; renderLog(); }
+        else if (ev.type === "state") { S = ev.data; streaming = null; render(); }
+        else if (ev.type === "error") { streaming = null; await refresh(); alertLine(ev.data); }
+      }
+    }
+  } catch (e) { streaming = null; alertLine(`The connection failed: ${e.message}. Check that the agent service runs, then send the message again.`); }
+  streaming = null; busy = false; $("send").disabled = false; await refresh(); $("text").focus();
+}
+
+async function refresh() {
+  if (!S) return;
+  try { const d = await api(`/v1/sessions/${encodeURIComponent(S.id)}?since=${S.version}`); if (!d.unchanged) { S = d; render(); } }
+  catch (e) {}
+}
+
+function turnFor(seq) { return (S.turns || []).find((t) => t.ai === seq); }
+
+function renderLog() {
+  const out = [];
+  for (const m of S?.messages || []) {
+    if (m.speaker === "human") out.push(`<div class="msg human"><div class="who">You · ${m.id}${m.channel === "voice" ? " · spoken" : ""}</div><div class="text">${esc(m.text)}</div></div>`);
+    else {
+      const t = turnFor(m.seq);
+      out.push(`<div class="msg ai"><div class="who">AI · <b>${esc(t?.decision?.name || "")}</b> · ${m.id}${m.interrupted ? ' · <span class="cut">cut off</span>' : ""}</div><div class="text">${esc(m.text)}</div></div>`);
+    }
+  }
+  if (streaming) {
+    out.push(`<div class="msg human"><div class="who">You · sending</div><div class="text">${esc(streaming.human)}</div></div>`);
+    out.push(`<div class="msg ai"><div class="who">AI · <b>${esc(streaming.persona || "reading your message")}</b></div><div class="text">${esc(streaming.ai) || '<span class="note">Jev reads your message, then the model writes.</span>'}</div></div>`);
+  }
+  $("log").innerHTML = out.join("");
+  $("log").scrollTop = 1e9;
+}
+
+function renderSide() {
+  if (!S) return;
+  const last = (S.turns || []).at(-1);
+  const st = ["Open", "Test", "Close"], si = st.indexOf(S.stage);
+  const track = `<div class="track">${st.map((n, i) => `<span class="${i === si ? "on" : i < si ? "past" : ""}">${n}</span>`).join("")}</div><div class="small">${esc(S.stage_why)}</div>`;
+  if (last?.decision) {
+    const d = last.decision, c = last.check;
+    const check = c ? `<div class="check ${c.done === true ? "yes" : c.done === false ? "no" : ""}">Check of the reply: ${esc(c.text)}</div>`
+                    : (S.busy ? `<div class="check">Jev reads the reply…</div>` : "");
+    $("move").innerHTML = `<div class="persona">The <em>${esc(d.persona)}</em></div>
+      <div class="kv"><span class="k">Job</span><span>${esc(d.move)}</span><span class="k">Why</span><span>${esc(d.why)}</span>
+      <span class="k">Debt</span><span>${esc(d.debt || "none")} ${d.kind ? "· " + esc(d.kind) + " · " + esc(d.promise) : ""}</span></div>${track}${check}`;
+  } else $("move").innerHTML = `<div class="small">No message yet.</div>${track}`;
+
+  const needDebt = last?.decision?.debt, needPromise = last?.decision?.promise;
+  $("prom").innerHTML = PROMISES.map((p) => { const s = S.scores[p];
+    return `<div class="${s.due ? "" : "no-due"}${p === needPromise && S.need ? " need" : ""}"><b>${p}</b><span>${WORDS[p]}</span><span class="s">${s.due ? "Due now" : "Not due yet"}</span><span>${s.owed ? `${s.paid} of ${s.owed} paid` : "no debts yet"}</span></div>`; }).join("");
+
+  const cols = {waiting: [], due: [], paid: []};
+  for (const d of S.board || []) cols[d.status].push(d);
+  cols.paid.sort((a, b) => b.paid - a.paid);
+  const card = (d) => `<div class="debt ${d.status === "paid" ? "paid" : ""}${d.id === S.need ? " need" : ""}"><span class="id">${esc(d.id)} · ${esc(d.kind)}</span>
+    <span>${esc(d.about)}</span><span class="who2">${d.status === "paid" ? "paid in M" + (d.paid + 1) : (d.owner === "both" ? "both sides" : d.owner === "ai" ? "AI owes" : "person owes")}</span></div>`;
+  $("debts").innerHTML = [["Waiting", "waiting"], ["Due now", "due"], ["Paid", "paid"]].map(([t, k]) =>
+    `<div><h3>${t}<span>${cols[k].length}</span></h3>${cols[k].map(card).join("") || '<div class="small">None</div>'}</div>`).join("");
+
+  const c = S.last_call;
+  if (c && c.questions?.length) {
+    $("call").innerHTML = `<div class="small">${esc(c.id)} · ${c.speaker === "human" ? "person" : "AI"} · ${c.questions.length} questions · ${c.seconds ?? "?"} s · ${(c.tokens || 0).toLocaleString()} tokens</div>
+      <div class="qs">${c.questions.map((q) => `<div class="q ${q.yes ? "yes" : ""}"><span>${esc(q.label)}</span><span class="bar"><i style="width:${Math.round((q.answer || 0) * 100)}%"></i></span><span class="yn">${(q.answer ?? 0).toFixed(2)}</span></div>`).join("")}</div>`;
+  } else if (c?.error) $("call").innerHTML = `<div class="err">${esc(c.error)}</div>`;
+
+  const tm = last?.timing;
+  $("timing").innerHTML = tm ? `<table class="t"><tr><td>Jev reads your message</td><td>${tm.read_human ?? "-"} s</td></tr>
+    <tr><td>LLM first word</td><td>${tm.llm_first_token ?? "-"} s</td></tr><tr><td>LLM full reply</td><td>${tm.llm_total ?? "-"} s</td></tr>
+    <tr><td>Jev reads the reply</td><td>${tm.read_ai ?? "-"} s</td></tr><tr><td>Jev tokens in this chat</td><td>${(S.tokens || 0).toLocaleString()} (about $${S.cost_usd})</td></tr></table>` : "No turn yet.";
+}
+
+function render() { renderLog(); renderSide(); }
+
+// --- voice ---
+function voiceState(kind, text) { $("vdot").className = "dot " + kind; $("vtext").textContent = text; }
+
+async function talk() {
+  if (room) { await room.disconnect(); return; }
+  const LK = window.LivekitClient;
+  if (!LK) { alertLine("The LiveKit client did not load."); return; }
+  $("talk").disabled = true; voiceState("", "Connecting…");
+  try {
+    const t = await api("/v1/voice/token", {method: "POST", body: JSON.stringify({session_id: S.id})});
+    room = new LK.Room({adaptiveStream: true, dynacast: true});
+    room.on(LK.RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === "audio") { const el = track.attach(); el.hidden = true; document.body.appendChild(el); }
+    });
+    room.on(LK.RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => el.remove()));
+    room.on(LK.RoomEvent.ParticipantConnected, () => voiceState("listen", "The agent joined. Speak when you are ready."));
+    room.on(LK.RoomEvent.ActiveSpeakersChanged, (speakers) => {
+      const me = speakers.some((p) => p.isLocal), agent = speakers.some((p) => !p.isLocal);
+      if (agent) voiceState("agent", "The agent speaks. Start to talk to interrupt it.");
+      else if (me) voiceState("you", "You speak…");
+      else voiceState("listen", "Listening.");
+    });
+    room.on(LK.RoomEvent.Disconnected, () => {
+      room = null; clearInterval(poll); poll = null; $("talk").textContent = "Talk"; $("talk").className = "btn";
+      voiceState("", "Voice is off."); refresh();
+    });
+    await room.connect(t.url, t.token);
+    await room.startAudio();
+    // the browser removes the agent's own voice (echo), room noise and level jumps before the audio leaves
+    await room.localParticipant.setMicrophoneEnabled(true, {echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1});
+    voiceState("listen", room.remoteParticipants.size ? "Listening." : "Connected. Waiting for the agent to join…");
+    $("talk").textContent = "Hang up"; $("talk").className = "btn live";
+    poll = setInterval(refresh, 700);
+  } catch (e) {
+    room = null; voiceState("", "Voice is off."); alertLine(`Voice did not start: ${e.message}. Check that livekit-server and the voice worker run.`);
+  }
+  $("talk").disabled = false;
+}
+
+$("go").onclick = () => startSession($("topic").value.trim() || $("topic").placeholder);
+$("topic").addEventListener("keydown", (e) => { if (e.key === "Enter") $("go").click(); });
+$("examples").innerHTML = EXAMPLES.map((x) => `<button type="button">${esc(x)}</button>`).join("");
+$("examples").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) startSession(b.textContent); });
+$("composer").addEventListener("submit", (e) => { e.preventDefault(); const t = $("text").value; $("text").value = ""; send(t); });
+$("text").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("composer").requestSubmit(); } });
+$("talk").onclick = talk;
+function setTheme(light) {
+  if (light) document.documentElement.dataset.theme = "light"; else delete document.documentElement.dataset.theme;
+  $("theme").textContent = light ? "Dark" : "Light";
+  try { localStorage.setItem("orb-theme", light ? "light" : "dark"); } catch (e) {}
+}
+$("theme").onclick = () => setTheme(document.documentElement.dataset.theme !== "light");
+$("theme").textContent = document.documentElement.dataset.theme === "light" ? "Dark" : "Light";
+health();
+const sid = new URLSearchParams(location.search).get("s");
+if (sid) loadSession(sid);
+</script>
+</body>
+</html>

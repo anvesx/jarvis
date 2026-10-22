@@ -1,0 +1,8 @@
+go 1.26
+
+use (
+	./apps/voice
+	./packages/go/lk-go-agent-sdk
+	./packages/go/lk-go-agent-sdk/plugins/silero
+	./packages/go/orb-plugins
+)

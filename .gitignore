@@ -1,0 +1,31 @@
+# secrets
+.env
+*.env
+!.env.example
+
+# runtime data (sessions, logs, built binaries)
+data/sessions/
+data/logs/
+data/bin/
+# ORB_DEBUG_AUDIO_DIR files hold real voices: never commit them
+data/debug_audio/
+
+# Python
+__pycache__/
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# OS and editors
+.DS_Store
+.vscode/
+.idea/
+
+# not needed in the repo: personal test chats (only the reference chat is test data), generated explainer pages,
+# and the SDK author's study notes
+data/chats/*
+!data/chats/20261012-152327.json
+docs/explainers/
+packages/go/lk-go-agent-sdk/_learning/
+packages/go/lk-go-agent-sdk/knowledge.txt
