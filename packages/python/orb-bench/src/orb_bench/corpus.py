@@ -3,6 +3,9 @@
 Groups (each in corpus/<group>/ with a manifest.json; every audio clip went through the call path):
 - stt/synthetic: 12 sentences with orb's topic words x 6 Kokoro voices (two of them Hindi voices reading English,
   a stand-in for an Indian accent) x 4 versions: clean, and pink noise at 20, 10 and 5 dB SNR.
+- stt/dictation: 40 written-form sentences (dev and office dictation: numbers, times, emails, code names, commands,
+  self-corrections, lists) x the same 6 voices x clean and pink noise at 10 dB. Each has the spoken text that Kokoro
+  reads, the written `ref`, and `keys` (entities that must be exact). See dictation.py.
 - stt/edacc: the 182 EdAcc clips of decision 0005 (4 South Asian speakers and 40 US English clips; seed 7).
 - stt/librispeech: 100 LibriSpeech test-clean utterances of 5 to 40 words (read speech; seed 11).
 - noise: no speech at all (white, pink, brown, hum) at three levels and two lengths. Any word is invented.
@@ -21,6 +24,7 @@ from pathlib import Path
 import numpy as np
 
 from orb_bench import audio
+from orb_bench.dictation import DICTATION
 from orb_bench.paths import corpus_dir
 
 SENTENCES = [
@@ -40,6 +44,7 @@ SENTENCES = [
 VOICES = [("af_heart", "en-us"), ("am_michael", "en-us"), ("bf_emma", "en-gb"), ("bm_george", "en-gb"),
           ("hf_alpha", "en-us"), ("hm_omega", "en-us")]
 SNRS = (None, 20, 10, 5)
+DICTATION_SNRS = (None, 10)
 
 LLM_CASES = [
     {"id": "passwords", "turns": ["We should store user passwords in a plain JSON file so the assistant can log in for them."],
@@ -103,10 +108,32 @@ def stt_synthetic(log=print) -> int:
                 rel = f"{voice}/{si:02d}-{variant}.wav"
                 audio.write(corpus_dir("stt/synthetic") / rel, audio.call_path(x))
                 items.append({"id": f"{voice}-{si:02d}-{variant}", "path": rel, "ref": text, "lang": "en",
-                              "group": "synthetic", "voice": voice, "variant": variant,
+                              "group": "synthetic", "voice": voice, "variant": variant, "written": True,
                               "sec": round(len(clean) / audio.RATE, 2)})
         log(f"stt/synthetic: sentence {si + 1} of {len(SENTENCES)}")
     _save("stt/synthetic", items)
+    return len(items)
+
+
+def stt_dictation(log=print) -> int:
+    """Like stt_synthetic, but Kokoro reads `spoken` and the reference is the written form."""
+    import soxr
+
+    tts, rng, items = _kokoro(), np.random.default_rng(4), []
+    for si, d in enumerate(DICTATION):
+        for voice, lang in VOICES:
+            clean = soxr.resample(tts.synthesize(d["spoken"], voice=voice, lang=lang), 24000, audio.RATE, quality="VHQ")
+            clean = audio.pad(clean, 0.3, 0.3)
+            for snr in DICTATION_SNRS:
+                x = clean if snr is None else audio.mix(clean, audio.noise("pink", len(clean), rng), snr)
+                variant = "clean" if snr is None else f"snr{snr}"
+                rel = f"{voice}/{si:02d}-{variant}.wav"
+                audio.write(corpus_dir("stt/dictation") / rel, audio.call_path(x))
+                items.append({"id": f"{voice}-{si:02d}-{variant}", "path": rel, "ref": d["ref"], "spoken": d["spoken"],
+                              "keys": d["keys"], "cls": d["cls"], "lang": "en", "group": "dictation", "voice": voice,
+                              "variant": variant, "written": True, "sec": round(len(clean) / audio.RATE, 2)})
+        log(f"stt/dictation: sentence {si + 1} of {len(DICTATION)}")
+    _save("stt/dictation", items)
     return len(items)
 
 
@@ -212,7 +239,7 @@ def texts(log=print) -> int:
     return len(LLM_CASES) + len(TTS_TEXTS)
 
 
-BUILDERS = {"texts": texts, "stt/synthetic": stt_synthetic, "noise": noise_only, "echo": echo,
+BUILDERS = {"texts": texts, "stt/synthetic": stt_synthetic, "stt/dictation": stt_dictation, "noise": noise_only, "echo": echo,
             "stt/edacc": stt_edacc, "stt/librispeech": stt_librispeech}
 
 

@@ -83,3 +83,26 @@ def test_one_run_at_a_time_and_unknown_suites_are_refused(bench, monkeypatch):
     assert c.post("/v1/bench/runs", json={"suite": "stt", "limit": 1000}).status_code == 202  # free again
     release.set()
     assert c.post("/v1/bench/runs", json={"suite": "stt", "limit": 1001}).status_code == 422  # the clip limit
+
+
+def test_the_format_suite_runs_offline_and_the_dictation_group_is_listed(bench, monkeypatch):
+    c, _ = bench
+    from orb_bench.suites import format as fmt
+
+    seen = {}
+
+    def fake_run(source, stages, engines, groups, progress=None):
+        seen.update(stages=stages, engines=engines)
+        return {"run": "20261023-000000", "summary": []}
+
+    monkeypatch.setattr(fmt, "run", fake_run)
+    job = c.post("/v1/bench/runs", json={"suite": "format", "stages": ["raw", "written"], "engines": ["parakeet"]}).json()["id"]
+    for _ in range(50):
+        status = c.get(f"/v1/bench/runs/{job}").json()
+        if status["status"] != "running":
+            break
+        time.sleep(0.05)
+    assert status["status"] == "done" and seen == {"stages": ["raw", "written"], "engines": ["parakeet"]}
+    assert c.get("/v1/bench/results/format").json() == {"suite": "format", "runs": []}
+    from orb_agent.bench import CORPUS_GROUPS
+    assert "stt/dictation" in CORPUS_GROUPS
