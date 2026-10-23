@@ -2,9 +2,10 @@
 
     python -m orb_speech.server            # port 8200, or ORB_SPEECH_PORT
     ORB_STT_ENGINE=parakeet python -m orb_speech.server  # another default STT; any engine can still be asked for
+    ORB_STT_FORMAT=raw python -m orb_speech.server       # the default of format=: written (default) or raw
 
-POST /v1/stt?sample_rate=16000[&language=en][&engine=whistle|parakeet]
-                                             body: PCM16 mono  ->  {"text", "language", "engine", "ms", "audio_ms"}
+POST /v1/stt?sample_rate=16000[&language=en][&engine=whistle|parakeet][&format=written|raw]
+                                             body: PCM16 mono  ->  {"text", "raw", "stages", "language", "engine", "ms", "audio_ms"}
 POST /v1/tts   {"text", "engine"?: kokoro|maya1|indic-speak, "voice"?, "speed"?, "style"?, "lang"?}
                                              ->  a stream of PCM16 mono at the engine's rate (header X-Sample-Rate)
 GET  /v1/engines                             ->  the STT and TTS engines, which are loaded, and the voices
@@ -27,9 +28,11 @@ from pydantic import BaseModel, Field
 
 from orb_speech import audio
 from orb_speech.engines import EngineError, Registry
+from orb_speech.textfmt import written
 
 log = logging.getLogger("orb.speech")
 STT_MAX_SECONDS = 60
+STT_FORMATS = ("written", "raw")
 CHUNK_BYTES = 4800  # 100 ms of 24 kHz PCM16
 
 
@@ -83,9 +86,21 @@ async def engine_of(reg: Registry, name: str | None, kind: str):
         raise HTTPException(503, f"{kind} engine {name} did not load: {e}")
 
 
-def create_app(stt=None, tts=None) -> FastAPI:
-    """The app with the given engines: a Registry, one engine, or None. A missing kind gives 503 on its endpoint."""
+def check_format(value: str | None, default: str = "written") -> str:
+    """The STT output format of a request: written (the default) or raw. A bad value is a 400 with the choices."""
+    fmt = default if value is None or value == "" else value
+    if fmt not in STT_FORMATS:
+        raise ValueError(f"format must be one of {', '.join(STT_FORMATS)}, not {fmt!r}.")
+    return fmt
+
+
+def create_app(stt=None, tts=None, stt_format: str = "written") -> FastAPI:
+    """The app with the given engines: a Registry, one engine, or None. A missing kind gives 503 on its endpoint.
+
+    `stt_format` is the default of `format` for /v1/stt (setting ORB_STT_FORMAT).
+    """
     stt, tts = as_registry(stt), as_registry(tts)
+    stt_format = check_format(stt_format)
     app = FastAPI(title="orb speech", docs_url=None, redoc_url=None)
 
     def describe(reg: Registry | None) -> dict | None:
@@ -113,9 +128,14 @@ def create_app(stt=None, tts=None) -> FastAPI:
 
     @app.post("/v1/stt")
     async def transcribe(request: Request, sample_rate: int = Query(16000), language: str | None = Query(None),
-                         engine: str | None = Query(None, max_length=32)):
+                         engine: str | None = Query(None, max_length=32),
+                         fmt: str | None = Query(None, alias="format", max_length=16)):
         if stt is None:
             raise HTTPException(503, "Speech-to-text is not loaded.")
+        try:
+            fmt = check_format(fmt, stt_format)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
         samples = await read_pcm(request, sample_rate, STT_MAX_SECONDS, 16000)
         model = await engine_of(stt, engine, "STT")
         try:
@@ -125,8 +145,14 @@ def create_app(stt=None, tts=None) -> FastAPI:
         except EngineError as e:  # an engine that works through another service: it is not reachable, or it refused
             raise HTTPException(502, str(e))
         name = stt.resolve(engine)
-        log.info("stt %s %d ms audio -> %d chars in %.1f ms", name, out["audio_ms"], len(out["text"]), out["ms"])
-        return {**out, "engine": name}
+        raw, stages = out["text"], {"asr": out["ms"]}  # the engine's time includes clean()
+        text = raw
+        if fmt == "written":
+            t0 = time.perf_counter()
+            text = written(raw)
+            stages["written"] = round((time.perf_counter() - t0) * 1000, 3)
+        log.info("stt %s %d ms audio -> %d chars (%s) in %.1f ms", name, out["audio_ms"], len(text), fmt, out["ms"])
+        return {**out, "text": text, "raw": raw, "stages": stages, "engine": name}
 
     @app.post("/v1/tts")
     async def speak(req: SpeakRequest):
@@ -210,9 +236,11 @@ def build() -> FastAPI:
             "indic-speak": {"voices": IndicSpeakTTS.voices, "styles": IndicSpeakTTS.styles, "langs": IndicSpeakTTS.langs}}
     tts = Registry({"kokoro": kokoro, "maya1": maya1, "indic-speak": indic_speak},
                    os.environ.get("ORB_TTS_ENGINE", "kokoro"), heavy=frozenset({"maya1", "indic-speak"}), meta=meta)
+    stt_format = check_format(os.environ.get("ORB_STT_FORMAT"))  # a bad value stops the start, not the first call
     stt.get(), tts.get()  # the defaults load now, so the first call is fast
-    log.info("models loaded in %.1f s (stt %s, tts %s)", time.perf_counter() - t0, stt.default, tts.default)
-    return create_app(stt, tts)
+    log.info("models loaded in %.1f s (stt %s, tts %s, format %s)", time.perf_counter() - t0, stt.default, tts.default,
+             stt_format)
+    return create_app(stt, tts, stt_format)
 
 
 def main():

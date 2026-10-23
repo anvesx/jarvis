@@ -6,6 +6,10 @@ Speech for orb, behind one HTTP service on 127.0.0.1:8200. It is local, except f
 - **text to speech:** Kokoro (the live voice) or two speech LMs for the bench: maya1 (English) and indic-speak
   (22 Indian languages)
 
+The text of `POST /v1/stt` is put in written form ("pull request number 4821" becomes "pull request #4821", "3 30 pm"
+becomes "3:30 PM") by `orb_speech.textfmt.written`. The answer also has `raw`, the engine's own text. `?format=raw`
+or `ORB_STT_FORMAT=raw` turns it off. The rules are in [decision 0010](../../../docs/decisions/0010-written-form-formatter.md).
+
 A request can name its engine, so the bench switches models without a restart. The design is in [LLD.md](LLD.md).
 The model choices are in [decision 0005](../../../docs/decisions/0005-stt-parakeet.md) and
 [decision 0007](../../../docs/decisions/0007-whistle-default-and-tts-results.md) and

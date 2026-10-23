@@ -1,10 +1,12 @@
 # LLD: orb-speech (local speech service)
 
-Code: `src/orb_speech/` · Tests: `tests/` (54: 51 by default, 3 more with `ORB_TEST_TTS_LM=1`) · Status: built ·
-Last update: 2026-10-22
+Code: `src/orb_speech/` · Tests: `tests/` (615: 612 by default, 3 more with `ORB_TEST_TTS_LM=1`) · Status: built ·
+Last update: 2026-10-23
 
 **One small HTTP service gives the voice worker and the bench their local speech models.** Each request can name its
-engine, so the bench switches models without a restart. No audio and no text leaves the machine.
+engine, so the bench switches models without a restart. The text of a speech-to-text call is then put in written
+form (`#4821`, `3:30 PM`, `priya.sharma@devxlabs.ai`) by a fixed set of rules, unless the call asks for `format=raw`.
+No audio and no text leaves the machine (except with the cloud engine `cartesia`, below).
 
 | Kind | Engines | Default | Loads |
 |---|---|---|---|
@@ -14,7 +16,7 @@ engine, so the bench switches models without a restart. No audio and no text lea
 ## 1. Input
 | Endpoint | Body | Limits | Answer |
 |---|---|---|---|
-| `POST /v1/stt?sample_rate=16000[&language=en][&engine=]` | PCM16 LE mono | ≤ 60 s; rate 8, 16, 24 or 48 kHz; a language of the engine (Whistle: en de fr es it nl pl; Parakeet: 25 European languages; Cartesia: any ISO-639 code, about 100) | `{"text", "language", "engine", "ms", "audio_ms"}`; 502 when the engine's own service fails; 503 when the engine cannot load |
+| `POST /v1/stt?sample_rate=16000[&language=en][&engine=][&format=written\|raw]` | PCM16 LE mono | ≤ 60 s; rate 8, 16, 24 or 48 kHz; a language of the engine (Whistle: en de fr es it nl pl; Parakeet: 25 European languages; Cartesia: any ISO-639 code, about 100); `format` is `written` or `raw`, at most 16 characters, and defaults to `ORB_STT_FORMAT` | `{"text", "raw", "stages", "language", "engine", "ms", "audio_ms"}`. `text` is the formatted text. `raw` is the engine's text after `clean()`. `stages` maps `asr` (the engine's ms, with `clean()`) and `written` (ms of the formatter, only with `format=written`) to milliseconds. 400 for a bad `format`, `sample_rate` or `language`; 502 when the engine's own service fails; 503 when the engine cannot load |
 | `POST /v1/tts` | `{"text", "engine"?, "voice"?, "speed"?, "style"?, "lang"?}` | text 1 to 2,000 characters; engine ≤ 32, voice ≤ 400, style ≤ 64, lang ≤ 16 characters; then the engine's own checks (below) | a stream of PCM16 mono; headers `X-Sample-Rate` (24000), `X-Engine` |
 | `GET /v1/engines` | none | | per kind: the engines, the default, the loaded ones, `cloud` (engines that send the audio to another company) and `unavailable` (engine → the reason, for example a missing key); per TTS engine: `voices`, `styles`, `langs` (known without a load) |
 | `GET /health` | none | | which models are loaded |
@@ -26,13 +28,15 @@ The engine checks of `/v1/tts`:
 | `maya1` | a description in words, ≤ 400 characters, without `"`, `<` or `>`; 3 presets | ignored (emotion tags such as `<laugh>` go in the text) | English only | none, or 1.0 |
 | `indic-speak` | one of 44 names (case does not matter); default: the female voice of `lang` | one of 14 trained tags, or none | 22 Indian languages, `en`, `en-us`, `en-gb` | none, or 1.0 |
 
-Settings: `ORB_STT_ENGINE` (`whistle`), `ORB_STT_LANGUAGE`, `ORB_TTS_ENGINE` (`kokoro`), `ORB_TTS_MODEL`,
+Settings: `ORB_STT_ENGINE` (`whistle`), `ORB_STT_FORMAT` (`written`; a bad value stops the start), `ORB_STT_LANGUAGE`, `ORB_TTS_ENGINE` (`kokoro`), `ORB_TTS_MODEL`,
 `ORB_TTS_VOICE`, `ORB_SPEECH_PORT`, `ORB_MODELS_DIR`, `CARTESIA_API_KEY` and `ORB_CARTESIA_VERSION` (default
 `2026-08-14`). The service reads only `CARTESIA_*` and `ORB_CARTESIA_*` keys from the repo `.env`. End-of-turn detection is not here: the voice worker runs
 LiveKit's turn detector in its own process (decision 0006).
 
 The callers are the voice worker, the agent service's bench proxy and the bench suites, on the same machine. The
-service checks every limit before it touches a model.
+service checks every limit before it touches a model: `format` is checked before the body is read, so a bad value
+costs nothing. The bench's `stt` suite sends no `format`, so it now scores the written text; set `ORB_STT_FORMAT=raw`
+for the old numbers.
 
 ## 2. Algorithm
 - **Engines** (`engines.py`): a `Registry` per kind maps a name to a factory. `get(name)` builds the engine on first
@@ -41,8 +45,10 @@ service checks every limit before it touches a model.
 - **One GPU user at a time** (`gpu.py`): PyTorch has one MPS command stream per process, and two threads must not use
   it at once. Every torch call on MPS (Parakeet, the SNAC and Vocos decoders) takes one reentrant lock. MLX has
   its own command queues and does not take it.
-- **STT:** read the body in parts and stop at the limit → PCM16 to float32 → resample to 16 kHz (soxr) → the
-  engine in a worker thread → `clean()`: stray quote marks at the ends and the fillers "uh", "um", "erm" removed.
+- **STT:** check `format` → read the body in parts and stop at the limit → PCM16 to float32 → resample to 16 kHz
+  (soxr) → the engine in a worker thread → `clean()`: stray quote marks at the ends and the fillers "uh", "um", "erm"
+  removed (this is `raw`) → `written()` unless `format=raw` (this is `text`). Both texts and the ms of the two
+  stages go in the answer.
   - **Whistle:** cactus-needle, on the CPU, with the language as an input.
   - **Parakeet:** the feature extractor (128 log-mel bins) → `ParakeetForTDT.generate` on MPS in float32. At load,
     0.2 s and 1 s of silence compile the GPU kernels. A keep-warm thread transcribes 0.2 s of silence after 1 s
@@ -53,6 +59,26 @@ service checks every limit before it touches a model.
     call raises `EngineError` with a plain reason (HTTP 401 or 403: the key; 402: no credits; 429: too many requests;
     a network error: not reachable), and the route answers 502. A missing key makes the engine fail to load with
     the fix in the message (503), and `/v1/engines` shows it as `unavailable`.
+- **Written form** (`textfmt.py`, `written(text, style="default")`, decision 0010): a pure function of the text. It
+  never runs on audio, never calls a model and never touches the network.
+  1. **Protect.** Text in "double quotes" or `backticks` is cut out and put back as it was.
+  2. **Tokenize.** Split on white space. Each token keeps its leading gap, its opening marks, its core and its closing
+     punctuation, so the spacing of the text comes back as it was.
+  3. **Scan once from left to right.** At each token the first matcher that fits takes the tokens it needs and
+     writes one replacement; the scan goes on after them. The order is: email, URL, date, label, time, number, case.
+     A matcher only joins tokens with no punctuation between them.
+  4. **Numbers.** The run of number words that starts at a token is parsed with a small grammar: units, teens, tens,
+     `hundred`, `thousand` to `trillion`, `and` after `hundred` or a scale, ordinals (`twenty first`, `hundredth`),
+     and `point` with digits for decimals. The run must be one valid number. `twenty twenty five` and `two thirty` are
+     not, so the whole run stays as it is. A number that is already digits is only read, never rewritten.
+  5. **What a number becomes.** Digits when the value is 10 or more, or the number has a decimal point, or it is
+     followed by money, `percent`, a time or metric unit, or follows a label word (`version`, `step`, `page`, …).
+     Under 10 with none of these it stays a word. A spelled ordinal becomes digits at 10th or more, and under 10 only
+     in a date.
+  6. **Classes.** The table in section 3 has each rule and its limit.
+  7. **Idempotence by construction.** Whatever a rule writes is never read again as something else: a number
+     that is written next to `am` already reads as a time, a year next to a unit is not a year, a domain label is never
+     a number, a label number is never followed by a unit. The fuzz test checks this on random text.
 - **TTS, Kokoro:** check → `create_stream` yields audio per phoneme batch. For Hindi, the text is phonemized with
   espeak (`hi`, language switch flags removed), and Kokoro gets the phonemes, so the "(en)" and "(hi)" marks are
   not spoken.
@@ -94,6 +120,20 @@ service checks every limit before it touches a model.
 | TTS part size | 4,800 bytes = 100 ms at 24 kHz | chosen |
 | Cartesia price | 1 credit for each 2 s of audio, silence included | Cartesia's pricing page, read 2026-10-22; the value of a credit depends on the plan |
 | Audio that a growing piece costs | with an interim call every c s over T s of speech: about T² / (2c) + T s (the interim calls, and the preflight) | the worker sends the whole piece each time. For T = 5 s: c = 0.3 s gives 47 s (9.3 ×), c = 1.0 s gives 17.5 s (3.5 ×) |
+| Written form: digits for numbers | ≥ 10; decimals; with money, percent, time and metric units (under 10 too; `one` only with percent, money or metric units, so "one day" stays); after `version step page line chapter section item port build release level row column slide question problem exercise figure table`; with `PR`, `pull request`, `issue`, `ticket`, `bug` | chosen: the rule of dictation tools (Wispr-like), checked on the fixtures |
+| Written form: thousands | a comma from 1,000 (`4,821`); no comma in a year (2001 to 2099 spoken as "two thousand …"), nor after `#` | chosen |
+| Written form: millions | `five million` → `5 million`; `five million two hundred thousand` → `5,200,000` | chosen |
+| Written form: `#N` | `PR`, `pull request`, `issue`, `ticket`, `bug` (+ optional `number`) then a number: `#N`. A bare `number N`: digits, or a spelled N ≥ 10, unless the word before is a determiner or a name of a number (`the`, `phone`, `account`, `order`, `serial`, `of`, …). `number one` stays | chosen |
+| Written form: `#N` read in pairs or split | only right after a `#` marker: pairs (`three eighteen` → `#318`, `forty eight twenty one` → `#4821`, `three oh two` → `#302`), digit runs (`one zero four two` → `#1042`), and a split id (`4800 and 21` → `#4821`, when the second part fits the zeros of the first). The same words in prose stay | chosen from the dictation corpus, 2026-10-23 |
+| Written form: url path | `slash X` joins a path only right after a domain or a URL (`docs.x.ai slash orb slash setup` → `docs.x.ai/orb/setup`), and stops at the first word that is not a path part. A spoken `slash` elsewhere stays (commands are STT-4) | chosen from the dictation corpus, 2026-10-23 |
+| Written form: time | hour 1 to 12 (digits or words) + optional minutes (`30`, `thirty`, `oh five`, `forty-five`, `330`, `3.30`) + `am`/`pm`/`a.m.`/`p.m.` → `H:MM AM`; `three o'clock` → `3 o'clock`. A time needs its marker: "two thirty" stays | chosen |
+| Written form: date | month + spelled ordinal → `Month 3rd`; `the third of March` → `3rd`; a year after a month or a date: `November 14th, 2026`. `March`, `May` and `August` need a capital letter | chosen |
+| Written form: year | `two thousand twenty six` → `2026`; `twenty twenty-six` and `nineteen oh five` only after a month or `in since until by from during before after through of around` | chosen |
+| Written form: money, percent | `N dollars [and M cents]` → `$N[.MM]` (integers only); `N percent` → `N%` | chosen |
+| Written form: email | `local at domain` → `local@domain` (lower case) when the domain has a valid TLD (or is already dotted) and the name has a `dot`, `underscore`, digit or dash, or the word before is a cue (`email`, `to`, `cc`, `send`, …). "Send it to Bob at the office" stays | chosen |
+| Written form: url | `x dot com`, `https colon slash slash x dot com slash a slash b` → `https://x.com/a/b`. The first word is not a function word (`the`, `polka`, …) or a number, the last is one of 44 TLDs; `dot in` / `dot so` / `dot no` / `dot it` / `dot es` need three labels | chosen |
+| Written form: case | `ok` → `OK`; `api ci pr readme url sql aws` and 45 more acronyms, and their plural `APIs PRs URLs`; `am` and `pm` only inside a time | chosen |
+| Written form: work limit | at most 16 words in an email name, a domain or a path, so the scan is linear for real text | chosen |
 | STT body limit | 60 s × 16,000 × 2 = 1,920,000 bytes at 16 kHz | chosen |
 | Shortest STT input | 100 ms; shorter gives empty text without a model call | chosen |
 
@@ -119,6 +159,16 @@ service checks every limit before it touches a model.
 | Cartesia, short audio | no call, no cost | `test_less_than_100_ms_of_audio_makes_no_call_and_costs_nothing` |
 | Cartesia in the service | `cloud` and `unavailable` in `/v1/engines`; 502 for an engine failure; 503 with the fix for a missing key | `test_server.py::test_cartesia_is_a_cloud_engine_that_needs_a_key` |
 | A caller that hangs up during an upload | a quiet 499, no traceback | `test_a_client_that_hangs_up_during_the_upload_is_not_a_server_error` |
+| Written form of each class | 57 spoken → written pairs: `#N`, times, dates, years, money, percent, units, email, domains, URLs, acronym case, spacing | `test_textfmt.py::test_the_written_form` |
+| The dictation corpus outputs | every distinct raw text of Parakeet and Whistle on `stt/dictation` (run 20261023-122740) gives its recorded written form; pairs, split ids and URL paths are fixed | `test_textfmt.py::test_the_recorded_dictation_outputs`, `test_the_dictation_fixtures_fix_the_number_and_url_gaps` |
+| Text that must not change | 33 lines: already written forms (`$12,450.30`, `Gemma 4`, `3:30 PM`, `#4821`), "one of them", "a second look", "number one", "Send it to Bob at the office", quotes and backticks, spoken CLI commands, identifiers | `test_written_and_ordinary_text_is_not_damaged` |
+| Recorded model outputs | 104 distinct outputs of 9 research models (bench/results) for the 16 synthetic clips: the written form of each is as stored | `test_the_recorded_model_outputs[*]`, fixture `tests/fixtures/synth_hyps.json` |
+| The three rules of design 4.1 | on every fixture and case: `written(written(x)) == written(x)`, the same text twice gives the same text, no content word added (only digits, symbols, the ordinal suffix, AM/PM); and on 6,000 random sentences of 1 to 14 spoken tokens | `test_idempotent_deterministic_and_adds_no_word[*]`, `test_fuzzed_token_soup_keeps_the_three_rules` |
+| Quotes, spacing, style, empty text | text in quotes or backticks is never touched; line breaks and double spaces stay; an unknown style is a `ValueError`; `""` and `None` give `""` | `test_text_in_quotes_and_backticks_is_never_touched` and 3 more |
+| Speed | p95 under 5 ms for 40 words | `test_it_is_fast_enough_for_the_turn_path` |
+| Formatted STT answer | `text` formatted, `raw` as the engine said it, `stages` has `asr` and `written`; `format=raw` skips the stage; the setting sets the default | `test_server.py::test_stt_gives_the_written_form_by_default_and_keeps_the_raw_text`, `test_stt_format_raw_skips_the_formatter_and_the_default_comes_from_the_setting` |
+| Bad `format` | 400 with the choices, before any model call (the fake engine was not called); an over-long value gives 422; a bad setting stops `create_app` | `test_a_bad_format_is_refused_before_any_model_call` |
+| Preflight equals final | the same raw text through audio of 1.5, 2 and 3 s, and again, gives one `text` | `test_the_preflight_text_equals_the_final_text` |
 | Real models (`ORB_TEST_TTS_LM=1`) | maya1 and indic-speak speak 0.8 to 8 s, not silence | `test_the_model_speaks[*]` |
 | The GPU crash of 2026-10-22 (`ORB_TEST_TTS_LM=1`) | Parakeet in a loop and maya1 together: no abort | `test_parakeet_and_a_speech_lm_share_the_gpu` |
 | Real models: Kokoro, then each STT engine | the same words back | `test_models.py` |
@@ -164,6 +214,23 @@ Measured on an Apple M5 (16 GB), 2026-10-22. STT: `orb_bench` stt run 20261022-1
 | maya1 | first audio 0.70 to 0.76 s; real-time factor 1.53 to 1.89; WER 0 to 7.7 %; load 6 to 10 s |
 | indic-speak (Kavya) | first audio 0.78 to 0.88 s; real-time factor 1.42 to 1.64; WER Hindi 0 %, English 0 to 14.3 %, Hinglish 37.5 %; load 4 to 8 s |
 
+Written form, measured on an Apple M4 (16 GB), 2026-10-23 (`orb_speech.textfmt.written`, one thread, after warm-up):
+
+| What | Measured |
+|---|---|
+| Time, 58 words with 6 classes | median 0.13 ms, p95 0.14 ms, p99 0.14 ms, max 0.23 ms (5,000 runs) |
+| Time, 37 words with no class | median 0.11 ms, p95 0.11 ms (5,000 runs) |
+| Time, 9 words | median 0.02 ms |
+| Import | 4.4 ms (`re` only) |
+| Worst case, an adversarial text of 8,000 characters (a chain of `dot`) | 29 ms; a normal 60 s turn is about 1,300 characters |
+| NeMo ITN for comparison | 4.2 ms median for 10 words and 30 ms for 58 words, and 2.6 to 7.6 s to load (decision 0010) |
+| Accuracy on the 104 recorded outputs of 9 research models for the 16 synthetic clips | token error rate with case and punctuation kept (no normalizer): 32.8 % → 27.7 %; digit and symbol tokens of the reference found exactly: 55 of 108 → 78 of 108 |
+| Same, Parakeet v3 (bf16) only, 16 clips | 31.6 % → 21.9 %; 9 of 16 → 13 of 16 |
+
+The rest of the gap on those clips is not for this stage: the ASR hears "priaya" and "devslabs", self-corrections
+("Tuesday, no wait, Wednesday"), lists, `dash b`, "use effect" and "10 RM" are for STT-3 and STT-4. The exit check on
+`stt/dictation` (`fwer`, `entity`) waits for STT-0's metrics.
+
 **The speech LMs are slower than real time on this Mac** (real-time factor > 1.4 even without decoding), so a live
 call with them stutters. They stay bench engines; Kokoro is the live voice. The Hinglish WER is too high for every
 engine: the judge writes English words such as "office" in Devanagari.
@@ -182,10 +249,25 @@ engine: the judge writes English words such as "office" in Devanagari.
 | The client closes during TTS | the generation stops at the next token | the stream sets a stop event |
 | A speech LM is unloaded during a stream | the stream ends at the next token | `close()` sets the closed event |
 | A model file is missing | a default engine: the service does not start; another engine: 503 that names `python -m orb_speech.models --all` | fail early, with the fix |
+| `format` is not `written` or `raw` | 400 `format must be one of written, raw, not 'x'`, before the body is read | fail early |
+| Text in quotes or backticks | passes through as it was | the speaker may mean the words as said |
+| A number run that is not one number ("twenty twenty five", "two thirty", "one two three four") | stays as words, except a year after a month or a preposition | no wrong digits |
+| "number one", "one of them", "a second", "a hundred", "GPT four" | stay words | ordinary talk; the cost is a few lines a dictation tool would write with digits |
+| `at` between two words ("Meet me at noon", "Look at google.com") | stays, unless the name has a dot, an underscore or a digit, or follows a cue word, and a valid domain follows | `Look@google.com` would be damage |
+| "dot com" with no name ("the dot com bubble"), "polka dot" | stays | the first label must not be a function word |
+| "3 30" with no am or pm | stays | no marker, no time |
+| "10 RM", "priaya.sharma at devslabs.ie" | `10 RM` stays; the email is joined as heard (`priaya.sharma@devslabs.ie`) | the formatter fixes the form, not the hearing |
+| "May first", "March third" | `May 1st` with a capital M; lower case `may first` stays a verb | an ambiguous month needs a capital |
+| `p.m.` at the end of a sentence | `PM.` (one dot) | the dot of `p.m.` is the sentence's too |
+| Another language (Hindi, German, …) | passes through unchanged | English rules; Parakeet also writes other languages |
+| An 8,000 character text of `dot dot dot …` | 29 ms, not a hang | the work caps (16 parts) |
 | Hindi text for maya1 | 400: "maya1 speaks English only" | the model is English |
 
 ## 8. Expected results
 - `python -m orb_speech.models --check --all` prints `ok` for every pinned file.
 - `GET /v1/engines` lists `whistle, parakeet` and `kokoro, maya1, indic-speak`, with 54, 3 and 44 voices.
-- `make test` passes 51 speech tests; `ORB_TEST_TTS_LM=1` adds 3 that load the speech LMs.
+- `make test` passes 612 speech tests (556 of them for the formatter); `ORB_TEST_TTS_LM=1` adds 3 that load the speech LMs.
 - `python -m orb_bench run tts` gives about the numbers of section 6.
+- `POST /v1/stt` of a clip that says "pull request number four thousand eight hundred and twenty-one" gives `text`
+  `... pull request #4821`, and `raw` has the spoken form. `?format=raw` gives both the same.
+- The same raw text always gives the same `text`, so the voice worker's preflight transcript equals its final one.
