@@ -131,7 +131,8 @@ async def entry(ctx: JobContext) -> None:
     debug_dir = str(Path(s.debug_audio_dir) / sid) if s.debug_audio_dir else ""
     if debug_dir:
         log.warning("debug audio is on: every transcribed piece is saved", extra={"dir": debug_dir})
-    batch = OrbSTT(http, s.speech_url, engine=stt_engine, language=s.stt_language, debug_dir=debug_dir)
+    batch = OrbSTT(http, s.speech_url, engine=stt_engine, language=s.stt_language, debug_dir=debug_dir,
+                   vocabulary=s.stt_vocabulary)
     session = AgentSession(
         stt=LiveSTT(stt=batch, vad=vad, interim_every=interim_every, preflight_after=s.preflight_after),
         vad=vad,

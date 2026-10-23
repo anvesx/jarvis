@@ -63,6 +63,7 @@ The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a
 | Silero min speech / min silence / prefix | 0.05 / 0.55 / 0.5 s | `ORB_VAD_MIN_SPEECH_S`, `_MIN_SILENCE_S`, `_PREFIX_S` | plugin defaults |
 | Endpointing min / max delay | 0.3 / 2.5 s | `ORB_MIN_ENDPOINTING_S`, `ORB_MAX_ENDPOINTING_S` | LiveKit defaults with the audio turn detector |
 | Interruption | 0.5 s and 2 words; resume after 2.0 s | `ORB_MIN_INTERRUPTION_S`, `_WORDS` | chosen: "Sure." is 1 word |
+| STT vocabulary | comma-separated terms, sent on every call; empty sends none | `ORB_STT_VOCABULARY` | chosen; the speech service checks the limits (decision 0011) |
 | Interim transcript | every 0.3 s of speech | `ORB_INTERIM_EVERY_S` | measured: 0.2 s did not stop barge-in sooner (0.95 s) |
 | Interim transcript, cloud STT | every 1.0 s of speech | `ORB_CLOUD_INTERIM_EVERY_S` | each call pays for the whole piece again: for 5 s of speech, 17.5 s of billed audio instead of 47 s (orb-speech LLD) |
 | Preflight | after 0.15 s of silence; 0 is off | `ORB_PREFLIGHT_S` | measured: p50 2.20 → 1.73 s with the TTS rules |
@@ -81,6 +82,7 @@ The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a
 | Which STT engines are cloud | the set and the default from the speech service; an older service, bad JSON and a service that is down all mean "local" | `test_the_worker_learns_which_stt_engines_are_cloud_services` |
 | LiveKit credentials | the dev key or a short secret only with a server on this machine | `test_dev_credentials_only_on_this_machine` |
 | STT request | PCM16, rate, language, engine; the service's error message on failure | `test_stt_sends_*`, `test_stt_errors_carry_the_service_message` |
+| STT vocabulary | `ORB_STT_VOCABULARY` goes in the `X-Orb-Vocabulary` header of every call of the session (so interim, preflight and final texts are corrected alike); none when it is empty | `test_stt_sends_the_session_vocabulary_on_every_call` |
 | TTS request | engine, voice, style and language passed; 24 kHz only | `test_tts_sends_*`, `test_tts_refuses_another_sample_rate` |
 | Turn text | the person's words since the agent spoke, joined | `test_turn_text_joins_the_words_since_the_agent_spoke` |
 | LLM stream | tokens out, events forwarded, `replace_last` false, true, false | `test_llm_streams_tokens_forwards_events_and_undoes_unheard_turns` |

@@ -16,7 +16,7 @@ No audio and no text leaves the machine (except with the cloud engine `cartesia`
 ## 1. Input
 | Endpoint | Body | Limits | Answer |
 |---|---|---|---|
-| `POST /v1/stt?sample_rate=16000[&language=en][&engine=][&format=written\|raw]` | PCM16 LE mono | ≤ 60 s; rate 8, 16, 24 or 48 kHz; a language of the engine (Whistle: en de fr es it nl pl; Parakeet: 25 European languages; Cartesia: any ISO-639 code, about 100); `format` is `written` or `raw`, at most 16 characters, and defaults to `ORB_STT_FORMAT` | `{"text", "raw", "stages", "language", "engine", "ms", "audio_ms"}`. `text` is the formatted text. `raw` is the engine's text after `clean()`. `stages` maps `asr` (the engine's ms, with `clean()`) and `written` (ms of the formatter, only with `format=written`) to milliseconds. 400 for a bad `format`, `sample_rate` or `language`; 502 when the engine's own service fails; 503 when the engine cannot load |
+| `POST /v1/stt?sample_rate=16000[&language=en][&engine=][&format=written\|raw][&vocab=on\|off]`, header `X-Orb-Vocabulary: term, term, …` | PCM16 LE mono | ≤ 60 s; rate 8, 16, 24 or 48 kHz; a language of the engine (Whistle: en de fr es it nl pl; Parakeet: 25 European languages; Cartesia: any ISO-639 code, about 100); `format` is `written` or `raw`, at most 16 characters, and defaults to `ORB_STT_FORMAT`; `vocab` is `on` (default) or `off`; the header has at most 8,192 bytes and, after the split at commas, at most 200 terms of 1 to 64 characters and 4,096 bytes, with no control character | `{"text", "raw", "stages", "language", "engine", "ms", "audio_ms"}`. `text` is the formatted text. `raw` is the engine's text after `clean()`. `stages` maps `asr` (the engine's ms, with `clean()`) `vocab` (ms of the vocabulary pass, only when there are terms) and `written` (ms of the formatter, only with `format=written`) to milliseconds. 400 for a bad `format`, `vocab`, vocabulary header, `sample_rate` or `language`; 502 when the engine's own service fails; 503 when the engine cannot load |
 | `POST /v1/tts` | `{"text", "engine"?, "voice"?, "speed"?, "style"?, "lang"?}` | text 1 to 2,000 characters; engine ≤ 32, voice ≤ 400, style ≤ 64, lang ≤ 16 characters; then the engine's own checks (below) | a stream of PCM16 mono; headers `X-Sample-Rate` (24000), `X-Engine` |
 | `GET /v1/engines` | none | | per kind: the engines, the default, the loaded ones, `cloud` (engines that send the audio to another company) and `unavailable` (engine → the reason, for example a missing key); per TTS engine: `voices`, `styles`, `langs` (known without a load) |
 | `GET /health` | none | | which models are loaded |
@@ -28,7 +28,7 @@ The engine checks of `/v1/tts`:
 | `maya1` | a description in words, ≤ 400 characters, without `"`, `<` or `>`; 3 presets | ignored (emotion tags such as `<laugh>` go in the text) | English only | none, or 1.0 |
 | `indic-speak` | one of 44 names (case does not matter); default: the female voice of `lang` | one of 14 trained tags, or none | 22 Indian languages, `en`, `en-us`, `en-gb` | none, or 1.0 |
 
-Settings: `ORB_STT_ENGINE` (`whistle`), `ORB_STT_FORMAT` (`written`; a bad value stops the start), `ORB_STT_LANGUAGE`, `ORB_TTS_ENGINE` (`kokoro`), `ORB_TTS_MODEL`,
+Settings: `ORB_STT_ENGINE` (`whistle`), `ORB_STT_FORMAT` (`written`; a bad value stops the start), `ORB_STT_VOCABULARY_FILE` (the team's terms, one per line, `#` comments; a missing or bad file stops the start), `ORB_STT_LANGUAGE`, `ORB_TTS_ENGINE` (`kokoro`), `ORB_TTS_MODEL`,
 `ORB_TTS_VOICE`, `ORB_SPEECH_PORT`, `ORB_MODELS_DIR`, `CARTESIA_API_KEY` and `ORB_CARTESIA_VERSION` (default
 `2026-08-14`). The service reads only `CARTESIA_*` and `ORB_CARTESIA_*` keys from the repo `.env`. End-of-turn detection is not here: the voice worker runs
 LiveKit's turn detector in its own process (decision 0006).
@@ -45,10 +45,16 @@ for the old numbers.
 - **One GPU user at a time** (`gpu.py`): PyTorch has one MPS command stream per process, and two threads must not use
   it at once. Every torch call on MPS (Parakeet, the SNAC and Vocos decoders) takes one reentrant lock. MLX has
   its own command queues and does not take it.
-- **STT:** check `format` → read the body in parts and stop at the limit → PCM16 to float32 → resample to 16 kHz
-  (soxr) → the engine in a worker thread → `clean()`: stray quote marks at the ends and the fillers "uh", "um", "erm"
-  removed (this is `raw`) → `written()` unless `format=raw` (this is `text`). Both texts and the ms of the two
-  stages go in the answer.
+- **STT:** check `format`, `vocab` and the vocabulary header → read the body in parts and stop at the limit → PCM16
+  to float32 → resample to 16 kHz (soxr) → the engine in a worker thread (Whistle also gets the terms as `keywords`)
+  → `clean()`: stray quote marks at the ends and the fillers "uh", "um", "erm" removed (this is `raw`) →
+  `vocab.correct()` when there are terms → `written()` unless `format=raw` (this is `text`). Both texts and the ms
+  of each stage go in the answer.
+- **Vocabulary** (`vocab.py`, `correct(text, terms)`, decision 0011): the terms are the team file's, then the
+  request's, without repeats (ignoring case; the first spelling stays). The list is compiled once and cached by its
+  value. For each word, the longest span of 1 to 3 words that sounds like a term becomes the term, written as given
+  (`use effect` → `useEffect`, `Red's` → `Redis`, `docs.devslabs.ai` → `docs.devxlabs.ai`). Text in quotes or
+  backticks, emails, URLs, `#N`, money and times are not touched. The function is pure and idempotent.
   - **Whistle:** cactus-needle, on the CPU, with the language as an input.
   - **Parakeet:** the feature extractor (128 log-mel bins) → `ParakeetForTDT.generate` on MPS in float32. At load,
     0.2 s and 1 s of silence compile the GPU kernels. A keep-warm thread transcribes 0.2 s of silence after 1 s
@@ -134,6 +140,10 @@ for the old numbers.
 | Written form: url | `x dot com`, `https colon slash slash x dot com slash a slash b` → `https://x.com/a/b`. The first word is not a function word (`the`, `polka`, …) or a number, the last is one of 44 TLDs; `dot in` / `dot so` / `dot no` / `dot it` / `dot es` need three labels | chosen |
 | Written form: case | `ok` → `OK`; `api ci pr readme url sql aws` and 45 more acronyms, and their plural `APIs PRs URLs`; `am` and `pm` only inside a time | chosen |
 | Written form: work limit | at most 16 words in an email name, a domain or a path, so the scan is linear for real text | chosen |
+| Vocabulary: when a span becomes a term | the phonetic keys (orb's own Metaphone-like key) match or differ by one edit (keys of 4 or more); the letters differ by at most 34 % of the longer side (`day or base` → database is 3 of 9 = 0.33), and terms of 4 letters or fewer must match exactly; dropping any one word of the span must not match as well (`parse the config` stays) | chosen; tuned on the dictation corpus, 2026-10-23 |
+| Vocabulary: ordinary words | a one-word span that is an ordinary word (12,530 words of SCOWL size 20) never changes. A span of ordinary words only must spell the term exactly and match its spaces and capitals: `use effect` → `useEffect`, but `red is` stays (Redis), `read me` stays (README), `like it` stays (LiveKit) | chosen, from the precision set |
+| Vocabulary: case only | a one-word span that differs from the term only in case changes only for a term with an inner capital or digit (`useeffect` → `useEffect`); `parakeet` stays. `Sanjay's` keeps its possessive | chosen |
+| Vocabulary: limits | 200 terms and 4,096 bytes per source; terms of 1 to 64 characters; the header at most 8,192 bytes; the team file at most 65,536 bytes | chosen |
 | STT body limit | 60 s × 16,000 × 2 = 1,920,000 bytes at 16 kHz | chosen |
 | Shortest STT input | 100 ms; shorter gives empty text without a model call | chosen |
 
@@ -166,6 +176,13 @@ for the old numbers.
 | The three rules of design 4.1 | on every fixture and case: `written(written(x)) == written(x)`, the same text twice gives the same text, no content word added (only digits, symbols, the ordinal suffix, AM/PM); and on 6,000 random sentences of 1 to 14 spoken tokens | `test_idempotent_deterministic_and_adds_no_word[*]`, `test_fuzzed_token_soup_keeps_the_three_rules` |
 | Quotes, spacing, style, empty text | text in quotes or backticks is never touched; line breaks and double spaces stay; an unknown style is a `ValueError`; `""` and `None` give `""` | `test_text_in_quotes_and_backticks_is_never_touched` and 3 more |
 | Speed | p95 under 5 ms for 40 words | `test_it_is_fast_enough_for_the_turn_path` |
+| Vocabulary fixes | 9 real engine outputs: `useEffect`, `userId`, `fetchUserProfile`, `TypeScript`, `parseConfig`, `Redis`, `Postgres`, a subdomain, an email name and domain, `Sanjay`, `Kubernetes`, `Terraform` | `test_vocab.py::test_the_terms_fix_real_engine_outputs` |
+| Vocabulary precision | 63 ordinary sentences with words that sound like the 25 terms: no change | `test_vocab.py::test_ordinary_sentences_never_change`, `test_the_precision_set_is_big_enough` |
+| Vocabulary properties | idempotent; the only new words are terms; no terms, no change; same input, same output; a term already there stays | `test_vocab.py::test_it_is_idempotent_and_the_only_new_words_are_terms`, `test_no_terms_change_nothing_and_the_same_input_gives_the_same_output`, `test_a_term_already_in_the_text_stays` |
+| Vocabulary known limits | the cases of section 7 give what they give, so a change of behaviour is seen | `test_vocab.py::test_the_known_limits_are_what_they_are`, `test_ordinary_word_pairs_that_only_sound_like_a_term_stay` |
+| Vocabulary limits and sources | each limit with its reason; the header split; the team file with comments; the merge order | `test_vocab.py::test_the_term_list_limits`, `test_the_header_and_the_team_file`, `test_the_common_word_list_is_loaded_and_has_its_source` |
+| Vocabulary in the service | header and team file correct the text; Whistle gets the terms as keywords; `vocab=off` skips both; a bad header or `vocab` is 400 before any model call; preflight equals final with terms | `test_server.py::test_the_vocabulary_header_and_the_team_file_correct_the_text`, `test_the_terms_go_to_an_engine_that_takes_keywords_and_vocab_off_skips_them`, `test_an_engine_without_keywords_gets_only_the_correction_pass`, `test_a_bad_vocabulary_is_refused_before_any_model_call`, `test_the_preflight_text_equals_the_final_text_with_a_vocabulary` |
+| Vocabulary speed | p95 < 5 ms for 40 words and 200 terms | `test_vocab.py::test_it_is_fast_enough_for_the_turn_path` |
 | Formatted STT answer | `text` formatted, `raw` as the engine said it, `stages` has `asr` and `written`; `format=raw` skips the stage; the setting sets the default | `test_server.py::test_stt_gives_the_written_form_by_default_and_keeps_the_raw_text`, `test_stt_format_raw_skips_the_formatter_and_the_default_comes_from_the_setting` |
 | Bad `format` | 400 with the choices, before any model call (the fake engine was not called); an over-long value gives 422; a bad setting stops `create_app` | `test_a_bad_format_is_refused_before_any_model_call` |
 | Preflight equals final | the same raw text through audio of 1.5, 2 and 3 s, and again, gives one `text` | `test_the_preflight_text_equals_the_final_text` |
@@ -195,6 +212,11 @@ Quality and speed are measured by the bench suites (`python -m orb_bench run stt
 - **The key** is read from the process environment or from the `CARTESIA_*` lines of the repo `.env` (not in git;
   other secrets in that file are not loaded). It goes only into the Authorization header. It is in no log line, no
   error message, no result and no test output (a test checks this).
+- **The vocabulary header is user input.** Its size is checked before it is split, every term is checked, and a bad
+  one is a 400 before the body is read. Terms never go into the log (only their count). A term changes only the text
+  of the same call.
+- **The common-word list** (`data/common_words.txt`) is SCOWL size 20 (Copyright 2000-2018 Kevin Atkinson; use,
+  copy, modify, distribute and sell allowed with the notice, which the file keeps).
 - **Licenses:** Parakeet CC-BY-4.0 (credit NVIDIA); Kokoro and Whistle Apache-2.0; SNAC MIT; maya1 Apache-2.0; indic-speak the Indic Open Model License (its text is pinned with the model). Both speech
   LMs are Llama 3.2 fine-tunes, so the Llama 3.2 Community License applies too.
 
@@ -231,6 +253,19 @@ The rest of the gap on those clips is not for this stage: the ASR hears "priaya"
 ("Tuesday, no wait, Wednesday"), lists, `dash b`, "use effect" and "10 RM" are for STT-3 and STT-4. The exit check on
 `stt/dictation` (`fwer`, `entity`) waits for STT-0's metrics.
 
+Vocabulary, measured on an Apple M4 (16 GB), 2026-10-23 (format run 20261023-130520 on stt run 20261023-122740, with
+a team list of 31 terms: the 18 of the corpus and 13 that are not in it):
+
+| What | Measured |
+|---|---|
+| Parakeet, `stt/dictation`, written → vocab + written | `entity` 51.2 → 65.5 %: identifier 15.3 → 90.3 %, domain 68.1 → 79.2 %, email 36.1 → 69.4 %, url 0 → 33.3 %; `fwer` 23.1 → 20.2 % |
+| Whistle, same | `entity` 32.6 → 41.8 %; `fwer` 40.1 → 37.6 % |
+| EdAcc and LibriSpeech, both engines | 0 sentences changed; WER unchanged |
+| Added words (a term where no word sounded like it) | 0 rows |
+| Time of the pass | p50 0.09 ms, p95 0.27 ms; the first call of a new term list compiles it (about 11 ms) |
+| Whistle `keywords`, `stt/dictation`, in process | WER 35.9 → 32.7 %, `entity` 15.8 → 21.2 % (29.3 % with the pass); p50 20 → 22 ms |
+| Whistle `keywords`, EdAcc / LibriSpeech | 21 of 182 / 3 of 100 outputs changed; WER 28.2 → 28.2 % / 5.0 → 4.9 % |
+
 **The speech LMs are slower than real time on this Mac** (real-time factor > 1.4 even without decoding), so a live
 call with them stutters. They stay bench engines; Kokoro is the live voice. The Hinglish WER is too high for every
 engine: the judge writes English words such as "office" in Devanagari.
@@ -262,11 +297,14 @@ engine: the judge writes English words such as "office" in Devanagari.
 | Another language (Hindi, German, …) | passes through unchanged | English rules; Parakeet also writes other languages |
 | An 8,000 character text of `dot dot dot …` | 29 ms, not a hang | the work caps (16 parts) |
 | Hindi text for maya1 | 400: "maya1 speaks English only" | the model is English |
+| A term that sounds like a rare English word: `oath` with OAuth, `terra firma` with Terraform, `get hub` with GitHub | it becomes the term | the word is not in the 12,530 ordinary words; a team adds only terms it uses |
+| The words of a camelCase term said in other sense: "their user ID" with userId | it becomes `userId` | the words alone cannot tell; context is STT-4's job |
+| Two ordinary words that only sound like a term: "post curves", "data dog" | they stay | precision first: an exact spelling is needed |
 
 ## 8. Expected results
 - `python -m orb_speech.models --check --all` prints `ok` for every pinned file.
 - `GET /v1/engines` lists `whistle, parakeet` and `kokoro, maya1, indic-speak`, with 54, 3 and 44 voices.
-- `make test` passes 612 speech tests (556 of them for the formatter); `ORB_TEST_TTS_LM=1` adds 3 that load the speech LMs.
+- `make test` passes 2,422 speech tests (most are fixture rows of the formatter and the vocabulary); `ORB_TEST_TTS_LM=1` adds 3 that load the speech LMs.
 - `python -m orb_bench run tts` gives about the numbers of section 6.
 - `POST /v1/stt` of a clip that says "pull request number four thousand eight hundred and twenty-one" gives `text`
   `... pull request #4821`, and `raw` has the spoken form. `?format=raw` gives both the same.

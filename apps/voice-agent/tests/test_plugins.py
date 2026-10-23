@@ -64,6 +64,24 @@ def test_stt_sends_pcm16_with_rate_language_and_engine():
                     "bytes": 2 * 320 * 2}
 
 
+def test_stt_sends_the_session_vocabulary_on_every_call():
+    seen = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen.append(req.headers.get("x-orb-vocabulary"))
+        return httpx.Response(200, json={"text": "hi", "language": "en", "ms": 1.0, "audio_ms": 20})
+
+    async def go():
+        async with client(handler) as http:
+            with_terms = OrbSTT(http, "http://speech", vocabulary="useEffect, Redis")
+            await with_terms.recognize(buffer=frame())
+            await with_terms.recognize(buffer=frame())
+            await OrbSTT(http, "http://speech").recognize(buffer=frame())
+
+    asyncio.run(go())
+    assert seen == ["useEffect, Redis", "useEffect, Redis", None]
+
+
 def test_stt_errors_carry_the_service_message():
     def handler(req):
         return httpx.Response(413, json={"error": "The audio is longer than 60 s."})

@@ -29,3 +29,6 @@ speech-lm = ["mlx==0.32.4", "mlx-lm==0.32.2", "snac==1.2.1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+orb_speech = ["data/*.txt"]

@@ -129,6 +129,7 @@ class ParakeetSTT:
 class WhistleSTT:
     sample_rate = SAMPLE_RATE
     name = "whistle-2.0.0"
+    takes_keywords = True  # the vocabulary also goes into the model as keyword biasing
 
     def __init__(self, weights: str | None = None, language: str | None = None):
         os.environ.setdefault("NEEDLE_TELEMETRY", "0")  # the package counts calls unless this is 0
@@ -139,8 +140,10 @@ class WhistleSTT:
         self._model = Whistle(weights=weights)
         self._lock = threading.Lock()
 
-    def transcribe(self, samples: np.ndarray, language: str | None = None) -> dict:
-        """{"text", "language", "ms", "audio_ms"}. An empty or near-silent input gives empty text."""
+    def transcribe(self, samples: np.ndarray, language: str | None = None,
+                   keywords: tuple[str, ...] = ()) -> dict:
+        """{"text", "language", "ms", "audio_ms"}. An empty or near-silent input gives empty text. `keywords` are the
+        vocabulary terms for Whistle's keyword biasing."""
         lang = language or self.language
         _check(lang, LANGUAGES, "Whistle")
         audio_ms = round(len(samples) / SAMPLE_RATE * 1000)
@@ -148,7 +151,8 @@ class WhistleSTT:
             return {"text": "", "language": lang, "ms": 0.0, "audio_ms": audio_ms}
         with self._lock:
             t0 = time.perf_counter()
-            r = self._model.transcribe(np.asarray(samples, dtype=np.float32), language=lang)
+            r = self._model.transcribe(np.asarray(samples, dtype=np.float32), language=lang,
+                                       keywords=list(keywords) or None)
             ms = (time.perf_counter() - t0) * 1000
         return {"text": clean(r.get("text")), "language": r.get("language"), "ms": round(ms, 1),
                 "audio_ms": audio_ms}

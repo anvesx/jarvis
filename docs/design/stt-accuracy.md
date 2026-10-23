@@ -106,16 +106,19 @@ used because the body is PCM. Limits: at most 200 terms and 4 KB, checked before
 ### 4.4 Vocabulary (`orb_speech/vocab.py`, STT-3)
 - **Sources, merged:**
   - the team file (`ORB_STT_VOCABULARY_FILE`);
-  - the request's terms (the worker sends the session's topic words and names);
+  - the request's terms (header `X-Orb-Vocabulary`; the worker sends `ORB_STT_VOCABULARY` on every call; the
+    session topic's words are still open);
   - later, a per-user list learned from edits.
 - **Whistle:** passes the terms as `keywords`.
 - **Every engine:** a correction pass over word n-grams (1–3 words) of the text. A span is replaced by a term when all
   of these hold:
-  - its phonetic key (Double Metaphone) matches;
+  - its phonetic key (orb's own Metaphone-like key) matches;
   - the normalised edit distance is ≤ 0.34;
-  - the span is not itself a common word, unless the term is multi-word ("use effect" → `useEffect`, "poster's" →
-    Postgres).
-- **Case and joiners:** the term's own case is used. CamelCase and dotted terms join the span's words.
+  - the span is not itself an ordinary word (SCOWL size 20), and no word of it is extra;
+  - a span of ordinary words only spells the term exactly and matches its capitals ("use effect" → `useEffect`;
+    "red is" stays).
+- **Case and joiners:** the term's own case is used. CamelCase and dotted terms join the span's words. A subdomain
+  keeps its first label (`docs.devslabs.ai` → `docs.devxlabs.ai`). Decision 0011 has the rules and the measurements.
 
 ### 4.5 Guarded LLM polish (`orb_speech/polish.py`, STT-4)
 - **Runs on the final transcript only, off the turn path.** The agent already has the deterministic text. The polished
@@ -255,6 +258,20 @@ Compare a later run only against a run made under the same load.
 - **Two misses are style choices, not errors** (decision 0010). The refs write "the 3rd time" and "March 3rd, 2027";
   the formatter keeps "third" and "March 3, 2027".
 
+### STT-3 result (format run 20261023-130520, team list of 31 terms; decision 0011)
+| `stt/dictation` | Parakeet written → + vocab | Whistle written → + vocab |
+|---|---|---|
+| `entity` | 51.2 → 65.5 % | 32.6 → 41.8 % |
+| identifier / domain / email / url `entity` | 15 → 90 / 68 → 79 / 36 → 69 / 0 → 33 % | 0 → 69 / 32 → 32 / 3 → 8 / 0 → 4 % |
+| `fwer` | 23.1 → 20.2 % | 40.1 → 37.6 % |
+| EdAcc, LibriSpeech | 0 sentences changed | 0 sentences changed |
+
+- **The exit check is met in part.** "No WER rise without a match" is met (0 changes). The 63-sentence precision set
+  passes.
+- **`entity` is 65.5 %, not 80 %.** The rest is in classes this pass cannot fix: commands, lists and
+  self-corrections (STT-4), and date and ordinal style.
+- **Whistle's keywords help:** WER 35.9 → 32.7 % on dictation, and EdAcc is unchanged.
+
 ## 6. Tickets
 **Process (changed 2026-10-23, the owner's rule):**
 - All work is on one branch, `feat/stt-accuracy`, in the main checkout. There are no worktrees.
@@ -267,7 +284,7 @@ Compare a later run only against a run made under the same load.
 |---|---|---|---|
 | STT-0 | Bench: `stt/dictation` group, the new metrics, the offline `format` suite, baseline runs. **Done 2026-10-23** (section 5) | none | baseline table for whistle and parakeet over all groups, saved in a run, numbers in this TDD |
 | STT-2 | Deterministic formatter (`textfmt.py`) + API `format` + `raw`. **Done 2026-10-23**, `fwer` −23.5 % of the −30 % target (section 5) | STT-0 metrics (for the exit only) | on `stt/dictation`, parakeet: `fwer` falls by ≥ 30 % relative, `entity` rises; normalized WER on edacc/librispeech no worse than +0.2 points; `added_words` = 0; p95 ≤ 5 ms; idempotence and preflight==final tests |
-| STT-3 | Vocabulary: Whistle `keywords`, phonetic correction, header + team file, worker sends topic words | STT-2 | `entity` on `stt/dictation` ≥ 80 % for parakeet with the vocabulary; no WER rise on edacc/librispeech **without** a vocabulary match; false-replacement test set (common words) passes |
+| STT-3 | Vocabulary: Whistle `keywords`, phonetic correction, header + team file, worker sends its terms. **Done 2026-10-23**, `entity` 65.5 % of the 80 % target (section 5) | STT-2 | `entity` on `stt/dictation` ≥ 80 % for parakeet with the vocabulary; no WER rise on edacc/librispeech **without** a vocabulary match; false-replacement test set (common words) passes |
 | STT-1 | Engine choice: Parakeet default and/or the interim/final split; MLX bf16 Parakeet measured | STT-0 | decision record with WER, latency p50/p90 and memory; `make e2e` passes; turn suite p50 within +0.15 s of the Whistle baseline |
 | STT-4 | Guarded LLM polish, off the turn path; LLM candidates benchmarked | STT-2, STT-3 | on `stt/dictation`: self-correction and list sentences fixed ≥ 70 %; `added_words` after the guard = 0; guard rejects < 20 %; p95 ≤ 400 ms; captions show the polished text |
 | STT-5 | Spike: Qwen3-ASR-1.7B (MLX, with context prompt) and Granite Speech on the bench | STT-0 | decision record: keep Parakeet, or add an engine; numbers for edacc South Asian, dictation `entity`, latency and memory |

@@ -279,3 +279,57 @@ def test_an_empty_transcript_stays_empty():
     c, _ = client(stt=stt)
     d = c.post("/v1/stt", content=pcm(1)).json()
     assert d["text"] == "" and d["raw"] == ""
+
+
+class KeywordSTT(SpokenSTT):
+    """An engine that takes keyword biasing, as Whistle does."""
+    name = "keyword-stt"
+    takes_keywords = True
+    heard = "Wrap the fetch inside use effect, then check the Red's cache."
+
+    def transcribe(self, samples, language=None, keywords=()):
+        self.keywords = keywords
+        return super().transcribe(samples, language)
+
+
+def test_the_vocabulary_header_and_the_team_file_correct_the_text():
+    c = TestClient(create_app(stt=KeywordSTT(), tts=FakeTTS(), vocabulary=("Redis",)))
+    d = c.post("/v1/stt", content=pcm(1), headers={"X-Orb-Vocabulary": "useEffect, LiveKit"}).json()
+    assert d["text"] == "Wrap the fetch inside useEffect, then check the Redis cache."
+    assert d["raw"] == KeywordSTT.heard and list(d["stages"]) == ["asr", "vocab", "written"]
+
+
+def test_the_terms_go_to_an_engine_that_takes_keywords_and_vocab_off_skips_them():
+    stt = KeywordSTT()
+    c = TestClient(create_app(stt=stt, tts=FakeTTS(), vocabulary=("Redis",)))
+    c.post("/v1/stt", content=pcm(1), headers={"X-Orb-Vocabulary": "useEffect"})
+    assert stt.keywords == ("Redis", "useEffect")  # the team file first, then the request
+    d = c.post("/v1/stt?vocab=off", content=pcm(1), headers={"X-Orb-Vocabulary": "useEffect"}).json()
+    assert d["text"] == KeywordSTT.heard and "vocab" not in d["stages"] and stt.keywords == ()
+
+
+def test_an_engine_without_keywords_gets_only_the_correction_pass():
+    c, e = client(stt=SpokenSTT())
+    d = c.post("/v1/stt", content=pcm(1), headers={"X-Orb-Vocabulary": "Kubernetes"}).json()
+    assert d["text"] == "Please review pull request #4821 at 3:30 PM." and "vocab" in d["stages"]
+
+
+def test_a_bad_vocabulary_is_refused_before_any_model_call():
+    c, e = client(stt=SpokenSTT())
+    for headers, why in (({"X-Orb-Vocabulary": "x" * 65}, "longer than 64 characters"),
+                         ({"X-Orb-Vocabulary": ",".join(f"t{i}" for i in range(201))}, "at most 200 terms"),
+                         ({"X-Orb-Vocabulary": "a" * 9000}, "header is longer than")):
+        r = c.post("/v1/stt", content=pcm(1), headers=headers)
+        assert r.status_code == 400 and why in r.json()["error"]
+    r = c.post("/v1/stt?vocab=maybe", content=pcm(1))
+    assert r.status_code == 400 and "vocab must be one of on, off" in r.json()["error"]
+    assert e["stt"].got is None
+    with pytest.raises(ValueError, match="longer than 64 characters"):
+        create_app(vocabulary=("y" * 65,))
+
+
+def test_the_preflight_text_equals_the_final_text_with_a_vocabulary():
+    c = TestClient(create_app(stt=KeywordSTT(), tts=FakeTTS()))
+    h = {"X-Orb-Vocabulary": "useEffect,Redis"}
+    texts = {c.post("/v1/stt", content=pcm(s), headers=h).json()["text"] for s in (1.5, 1.5, 2.0, 3.0)}
+    assert texts == {"Wrap the fetch inside useEffect, then check the Redis cache."}

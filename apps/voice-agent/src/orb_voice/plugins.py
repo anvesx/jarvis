@@ -58,9 +58,12 @@ class OrbSTT(stt.STT):
     """Batch speech to text through the orb speech service: POST /v1/stt."""
 
     def __init__(self, http: httpx.AsyncClient, base_url: str, *, engine: str = "", language: str = "en",
-                 debug_dir: str = ""):
+                 debug_dir: str = "", vocabulary: str = ""):
         super().__init__(capabilities=stt.STTCapabilities(streaming=False, interim_results=False))
         self._http, self._url, self._engine, self._language = http, base_url, engine, language
+        # The session's own terms (ORB_STT_VOCABULARY). The same header goes with every call of a session, so the
+        # interim, preflight and final texts of one piece are corrected alike.
+        self._headers = {"X-Orb-Vocabulary": vocabulary.encode("utf-8")} if vocabulary.strip() else {}
         self._debug_dir = Path(debug_dir) if debug_dir else None
         self._dumped = 0
 
@@ -83,7 +86,8 @@ class OrbSTT(stt.STT):
         if self._engine:
             params["engine"] = self._engine
         try:
-            r = await self._http.post(f"{self._url}/v1/stt", params=params, content=pcm, timeout=conn_options.timeout)
+            r = await self._http.post(f"{self._url}/v1/stt", params=params, content=pcm, headers=self._headers,
+                                      timeout=conn_options.timeout)
         except httpx.HTTPError as e:
             raise APIConnectionError(f"speech service: {type(e).__name__}") from e
         if r.status_code != 200:

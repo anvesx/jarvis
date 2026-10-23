@@ -3,8 +3,10 @@
     python -m orb_speech.server            # port 8200, or ORB_SPEECH_PORT
     ORB_STT_ENGINE=parakeet python -m orb_speech.server  # another default STT; any engine can still be asked for
     ORB_STT_FORMAT=raw python -m orb_speech.server       # the default of format=: written (default) or raw
+    ORB_STT_VOCABULARY_FILE=team.txt python -m orb_speech.server  # the team's terms, one per line
 
-POST /v1/stt?sample_rate=16000[&language=en][&engine=whistle|parakeet][&format=written|raw]
+POST /v1/stt?sample_rate=16000[&language=en][&engine=whistle|parakeet][&format=written|raw][&vocab=on|off]
+               header X-Orb-Vocabulary: the request's own terms, comma separated
                                              body: PCM16 mono  ->  {"text", "raw", "stages", "language", "engine", "ms", "audio_ms"}
 POST /v1/tts   {"text", "engine"?: kokoro|maya1|indic-speak, "voice"?, "speed"?, "style"?, "lang"?}
                                              ->  a stream of PCM16 mono at the engine's rate (header X-Sample-Rate)
@@ -26,13 +28,15 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.requests import ClientDisconnect
 from pydantic import BaseModel, Field
 
-from orb_speech import audio
+from orb_speech import audio, vocab
 from orb_speech.engines import EngineError, Registry
 from orb_speech.textfmt import written
 
 log = logging.getLogger("orb.speech")
 STT_MAX_SECONDS = 60
 STT_FORMATS = ("written", "raw")
+VOCAB_SWITCH = ("on", "off")
+VOCAB_HEADER = "X-Orb-Vocabulary"
 CHUNK_BYTES = 4800  # 100 ms of 24 kHz PCM16
 
 
@@ -94,13 +98,24 @@ def check_format(value: str | None, default: str = "written") -> str:
     return fmt
 
 
-def create_app(stt=None, tts=None, stt_format: str = "written") -> FastAPI:
+def check_vocab(value: str | None) -> bool:
+    """The `vocab` switch of a request: on (the default) or off."""
+    if value in (None, "", "on"):
+        return True
+    if value == "off":
+        return False
+    raise ValueError(f"vocab must be one of {', '.join(VOCAB_SWITCH)}, not {value!r}.")
+
+
+def create_app(stt=None, tts=None, stt_format: str = "written", vocabulary: tuple[str, ...] = ()) -> FastAPI:
     """The app with the given engines: a Registry, one engine, or None. A missing kind gives 503 on its endpoint.
 
-    `stt_format` is the default of `format` for /v1/stt (setting ORB_STT_FORMAT).
+    `stt_format` is the default of `format` for /v1/stt (setting ORB_STT_FORMAT). `vocabulary` is the team's term list
+    (setting ORB_STT_VOCABULARY_FILE); a request adds its own terms in the X-Orb-Vocabulary header.
     """
     stt, tts = as_registry(stt), as_registry(tts)
     stt_format = check_format(stt_format)
+    vocabulary = vocab.check_terms(vocabulary, "vocabulary file")
     app = FastAPI(title="orb speech", docs_url=None, redoc_url=None)
 
     def describe(reg: Registry | None) -> dict | None:
@@ -129,17 +144,21 @@ def create_app(stt=None, tts=None, stt_format: str = "written") -> FastAPI:
     @app.post("/v1/stt")
     async def transcribe(request: Request, sample_rate: int = Query(16000), language: str | None = Query(None),
                          engine: str | None = Query(None, max_length=32),
-                         fmt: str | None = Query(None, alias="format", max_length=16)):
+                         fmt: str | None = Query(None, alias="format", max_length=16),
+                         vocab_switch: str | None = Query(None, alias="vocab", max_length=8)):
         if stt is None:
             raise HTTPException(503, "Speech-to-text is not loaded.")
         try:
             fmt = check_format(fmt, stt_format)
-        except ValueError as e:
+            terms = vocab.merge(vocabulary, vocab.parse_header(request.headers.get(VOCAB_HEADER))) \
+                if check_vocab(vocab_switch) else ()
+        except ValueError as e:  # also a VocabularyError: checked before the body is read and before any model call
             raise HTTPException(400, str(e))
         samples = await read_pcm(request, sample_rate, STT_MAX_SECONDS, 16000)
         model = await engine_of(stt, engine, "STT")
+        args = {"keywords": terms} if terms and getattr(model, "takes_keywords", False) else {}
         try:
-            out = await asyncio.to_thread(model.transcribe, samples, language)
+            out = await asyncio.to_thread(model.transcribe, samples, language, **args)
         except ValueError as e:
             raise HTTPException(400, str(e))
         except EngineError as e:  # an engine that works through another service: it is not reachable, or it refused
@@ -147,11 +166,16 @@ def create_app(stt=None, tts=None, stt_format: str = "written") -> FastAPI:
         name = stt.resolve(engine)
         raw, stages = out["text"], {"asr": out["ms"]}  # the engine's time includes clean()
         text = raw
+        if terms:
+            t0 = time.perf_counter()
+            text = vocab.correct(text, terms)
+            stages["vocab"] = round((time.perf_counter() - t0) * 1000, 3)
         if fmt == "written":
             t0 = time.perf_counter()
-            text = written(raw)
+            text = written(text)
             stages["written"] = round((time.perf_counter() - t0) * 1000, 3)
-        log.info("stt %s %d ms audio -> %d chars (%s) in %.1f ms", name, out["audio_ms"], len(text), fmt, out["ms"])
+        log.info("stt %s %d ms audio -> %d chars (%s, %d terms) in %.1f ms", name, out["audio_ms"], len(text), fmt,
+                 len(terms), out["ms"])
         return {**out, "text": text, "raw": raw, "stages": stages, "engine": name}
 
     @app.post("/v1/tts")
@@ -237,10 +261,12 @@ def build() -> FastAPI:
     tts = Registry({"kokoro": kokoro, "maya1": maya1, "indic-speak": indic_speak},
                    os.environ.get("ORB_TTS_ENGINE", "kokoro"), heavy=frozenset({"maya1", "indic-speak"}), meta=meta)
     stt_format = check_format(os.environ.get("ORB_STT_FORMAT"))  # a bad value stops the start, not the first call
+    vocab_file = os.environ.get("ORB_STT_VOCABULARY_FILE", "").strip()
+    vocabulary = vocab.load_file(vocab_file) if vocab_file else ()  # a missing or bad file stops the start too
     stt.get(), tts.get()  # the defaults load now, so the first call is fast
-    log.info("models loaded in %.1f s (stt %s, tts %s, format %s)", time.perf_counter() - t0, stt.default, tts.default,
-             stt_format)
-    return create_app(stt, tts, stt_format)
+    log.info("models loaded in %.1f s (stt %s, tts %s, format %s, %d vocabulary terms)", time.perf_counter() - t0,
+             stt.default, tts.default, stt_format, len(vocabulary))
+    return create_app(stt, tts, stt_format, vocabulary)
 
 
 def main():
