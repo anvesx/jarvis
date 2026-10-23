@@ -9,10 +9,12 @@ PUT  /v1/sessions/{id}            {"topic", "agent"?}       -> the state; create
 POST /v1/sessions/{id}/turns      {"text", "channel"?, "replace_last"?}
                                   -> NDJSON events: read, decision, token..., reply, check, state
 POST /v1/voice/token              {"session_id"}            -> {"url", "token", "room", "identity"}
+GET  /v1/voice/status                                       -> {"url", "dev", "local", "livekit", "worker"} or null
 GET  /health
 GET  /                                                      -> the web chat
 
-It listens on 127.0.0.1 only. It has no user accounts yet, so it must not be reachable from a network.
+It listens on 127.0.0.1 only and has no user accounts. A request that comes through a tunnel or from another device
+is refused unless it has the key ORB_SHARE_KEY (access.py).
 """
 from __future__ import annotations
 
@@ -23,20 +25,34 @@ import secrets
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from orb_core.agent import CHANNELS, Event, InputError, SessionStore, check_session_id
-from orb_agent.voice import VoiceConfig, room_for
+from orb_agent import livekit_proxy
+from orb_agent.access import AccessMiddleware, check_key
+from orb_agent.bench import make_router
+from orb_agent.voice import VoiceConfig, host_port, is_local, listening, livekit_answers, room_for
 
 log = logging.getLogger("orb.agent")
 STATIC = Path(__file__).parent / "static"
 
 
+class SessionConfig(BaseModel):
+    """The models of one session, chosen in the bench. Empty fields use the service defaults."""
+    stt_engine: str | None = Field(default=None, max_length=32)
+    llm_model: str | None = Field(default=None, max_length=64)
+    tts_engine: str | None = Field(default=None, max_length=32)
+    tts_voice: str | None = Field(default=None, max_length=400)
+    tts_style: str | None = Field(default=None, max_length=64)
+    tts_lang: str | None = Field(default=None, max_length=16)
+
+
 class NewSession(BaseModel):
     topic: str = Field(min_length=1, max_length=2000)
     agent: str | None = None
+    config: SessionConfig | None = None
 
 
 class TurnIn(BaseModel):
@@ -49,8 +65,22 @@ class VoiceIn(BaseModel):
     session_id: str
 
 
-def create_app(store: SessionStore, voice: VoiceConfig | None = None) -> FastAPI:
+def create_app(store: SessionStore, voice: VoiceConfig | None = None, *, model_agent=None, installed_models=None,
+               default_model: str = "", speech_url: str | None = None, self_url: str = "http://127.0.0.1:8100",
+               share_key: str | None = None, probe=None, worker_port: int | None = None, livekit_probe=None) -> FastAPI:
+    """`model_agent(model)` makes an agent that uses another LLM; `installed_models()` lists the models it may use.
+    With `speech_url`, the bench API (bench.py) is on too. `share_key` lets a remote request in (access.py).
+    `probe(host, port)` says whether a server listens there: with it, the voice status tells whether the LiveKit server
+    and the voice worker (on `worker_port`) run. `livekit_probe(url)` checks the LiveKit server by its address instead
+    (a tunnel accepts a connection also when no server is behind it). Without a probe, the status does not check."""
     app = FastAPI(title="orb agent", docs_url=None, redoc_url=None)
+    app.add_middleware(AccessMiddleware, key=check_key(share_key))  # checked here: Starlette makes the middleware at the first request
+    proxy = voice is not None and is_local(voice.server)  # a LiveKit server on this computer: its signal goes through this service too
+    if proxy:
+        app.include_router(livekit_proxy.make_router(voice.server))
+    if speech_url:
+        app.include_router(make_router(speech_url, self_url))
+    configs: dict[str, dict] = {}  # session id -> its SessionConfig, without empty fields
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     background: set[asyncio.Task] = set()
 
@@ -69,6 +99,22 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None) -> FastAPI
             raise HTTPException(404, f"There is no session {sid}. Start one with POST /v1/sessions.")
         return s
 
+    async def agent_for(body: NewSession) -> str | None:
+        """The agent of a new session: the default one, or one for the LLM that the config names."""
+        model = body.config.llm_model if body.config else None
+        if not model or model == default_model or model_agent is None:
+            return body.agent
+        name = f"discussion@{model}"
+        if name not in store.agents:
+            models = await installed_models() if installed_models else []
+            if model not in models:
+                raise HTTPException(400, f"Ollama has no model {model!r}. Installed: {', '.join(models) or 'none'}.")
+            store.agents[name] = model_agent(model)
+        return name
+
+    def with_config(s) -> dict:
+        return {**s.state(), "config": configs.get(s.id, {})}
+
     def started(s):
         if hasattr(s, "prepare"):
             later(s.prepare())
@@ -85,6 +131,21 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None) -> FastAPI
     async def page():
         return FileResponse(STATIC / "index.html")
 
+    @app.get("/bench")
+    async def bench_page():  # the bench tools are tabs of the chat page now
+        return RedirectResponse("/", status_code=307)
+
+    async def unknown():
+        return None
+
+    async def voice_status() -> dict | None:
+        if voice is None:
+            return None
+        server = livekit_probe(voice.server) if livekit_probe else probe(*host_port(voice.server)) if probe else unknown()
+        worker = probe("127.0.0.1", worker_port) if probe and worker_port else unknown()
+        livekit, worker = await asyncio.gather(server, worker)
+        return {"url": voice.url, "dev": voice.dev, "local": voice.local, "proxy": proxy, "livekit": livekit, "worker": worker}
+
     @app.get("/health")
     async def health():
         agents = {}
@@ -93,16 +154,35 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None) -> FastAPI
                 agents[name] = await agent.health()
             except Exception as e:
                 agents[name] = {"error": f"{type(e).__name__}: {e}"}
-        return {"ok": True, "agents": agents, "sessions": len(store.list()),
-                "voice": {"url": voice.url, "dev": voice.dev} if voice else None}
+        return {"ok": True, "agents": agents, "sessions": len(store.list()), "voice": await voice_status()}
+
+    @app.get("/v1/voice/status")
+    async def voice_state():  # light: the page asks for it each time that a person presses Talk
+        return await voice_status()
 
     @app.post("/v1/sessions", status_code=201)
     async def create(body: NewSession):
+        agent = await agent_for(body)
         try:
-            s = started(store.create(body.topic, body.agent))
+            s = started(store.create(body.topic, agent))
         except InputError as e:
             raise HTTPException(400, str(e))
-        return s.state()
+        if body.config:
+            configs[s.id] = body.config.model_dump(exclude_none=True)
+        return with_config(s)
+
+    @app.get("/v1/models")
+    async def models():
+        return {"llm": {"default": default_model, "installed": await installed_models() if installed_models else []}}
+
+    @app.put("/v1/sessions/{sid}/config")
+    async def set_config(sid: str, body: SessionConfig):
+        s = session_or_404(sid)
+        old = configs.get(sid, {})
+        if body.llm_model and body.llm_model != old.get("llm_model", default_model):
+            raise HTTPException(400, "The LLM of a session is fixed when it starts. Start a new session for another LLM.")
+        configs[sid] = {**old, **body.model_dump(exclude_none=True)}
+        return configs[s.id]
 
     @app.get("/v1/sessions")
     async def listing():
@@ -111,7 +191,7 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None) -> FastAPI
     @app.get("/v1/sessions/{sid}")
     async def read(sid: str, since: int | None = None):
         s = session_or_404(sid)
-        state = s.state()
+        state = with_config(s)
         if since is not None and state.get("version") == since:
             return {"version": since, "unchanged": True}
         return state
@@ -121,10 +201,12 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None) -> FastAPI
         try:
             s = store.get(check_session_id(sid))
             if s is None:
-                s = started(store.create(body.topic, body.agent, sid))
+                s = started(store.create(body.topic, await agent_for(body), sid))
+                if body.config:
+                    configs[s.id] = body.config.model_dump(exclude_none=True)
         except InputError as e:
             raise HTTPException(400, str(e))
-        return s.state()
+        return with_config(s)
 
     @app.post("/v1/sessions/{sid}/turns")
     async def turn(sid: str, body: TurnIn):
@@ -167,10 +249,22 @@ def build() -> FastAPI:
 
     config.bootstrap()
     root = config.repo_root()
-    llm = Ollama(base_url=os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"),
-                 model=os.environ.get("ORB_LLM_MODEL", "gemma4:e2b"))
-    store = SessionStore({"discussion": DiscussionAgent(make_reader(), llm)}, save_dir=root / "data" / "sessions")
-    return create_app(store, VoiceConfig.from_env())
+    url = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
+    default_model = os.environ.get("ORB_LLM_MODEL", "gemma4:e2b")
+    reader = make_reader()
+    store = SessionStore({"discussion": DiscussionAgent(reader, Ollama(base_url=url, model=default_model))},
+                         save_dir=root / "data" / "sessions")
+
+    async def installed() -> list[str]:
+        return (await Ollama(base_url=url, model=default_model).health()).get("available") or []
+
+    port = int(os.environ.get("ORB_AGENT_PORT", "8100"))
+    return create_app(store, VoiceConfig.from_env(), default_model=default_model, installed_models=installed,
+                      model_agent=lambda model: DiscussionAgent(reader, Ollama(base_url=url, model=model)),
+                      speech_url=os.environ.get("ORB_SPEECH_URL", "http://127.0.0.1:8200"),
+                      self_url=f"http://127.0.0.1:{port}", share_key=os.environ.get("ORB_SHARE_KEY"),
+                      probe=listening, worker_port=int(os.environ.get("ORB_VOICE_PORT", "8081")),
+                      livekit_probe=livekit_answers)
 
 
 def main():

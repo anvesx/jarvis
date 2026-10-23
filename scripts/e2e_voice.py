@@ -27,10 +27,10 @@ import httpx
 import numpy as np
 from livekit import rtc
 
+from orb_bench.room import FRAME, RATE, Ear, kokoro, send, silence  # shared with the turn suite
+
 AGENT = "http://127.0.0.1:8100"
 SPEECH = "http://127.0.0.1:8200"
-RATE = 48000
-FRAME = RATE // 50  # 20 ms
 TURNS = [
     ("We should store user passwords in a plain JSON file so the assistant can log in for them.", "Rival"),
     ("No, I don't agree with you.", "Examiner"),
@@ -61,52 +61,7 @@ def pink(n, rms, seed=3):
 
 async def speak_audio(client: httpx.AsyncClient, text: str) -> np.ndarray:
     """Kokoro speech for `text`, at 48 kHz float32."""
-    r = await client.post(f"{SPEECH}/v1/tts", json={"text": text, "voice": "am_michael"})
-    r.raise_for_status()
-    pcm = np.frombuffer(r.content, dtype="<i2").astype(np.float32) / 32768.0
-    import soxr
-    return soxr.resample(pcm, int(r.headers["x-sample-rate"]), RATE).astype(np.float32)
-
-
-class Ear:
-    """Listens to the agent's audio track and records when it is loud."""
-
-    def __init__(self):
-        self.loud_times: list[float] = []
-        self.frames = 0
-
-    async def listen(self, track):
-        async for ev in rtc.AudioStream(track, sample_rate=RATE, num_channels=1):
-            data = np.frombuffer(ev.frame.data, dtype=np.int16).astype(np.float32) / 32768.0
-            self.frames += 1
-            if len(data) and float(np.sqrt(np.mean(data ** 2))) > 0.01:
-                self.loud_times.append(time.monotonic())
-
-    def first_loud_after(self, t):
-        return next((x for x in self.loud_times if x > t), None)
-
-    def quiet_since(self, t, quiet=1.2):
-        """True when the agent spoke after t and has been quiet for `quiet` seconds."""
-        after = [x for x in self.loud_times if x > t]
-        return bool(after) and time.monotonic() - after[-1] > quiet
-
-
-async def send(source: rtc.AudioSource, samples: np.ndarray):
-    """Send audio in real time, 20 ms per frame."""
-    pcm = (np.clip(samples, -1, 1) * 32767).astype(np.int16)
-    t0 = time.monotonic()
-    for i in range(0, len(pcm), FRAME):
-        chunk = pcm[i:i + FRAME]
-        if len(chunk) < FRAME:
-            chunk = np.pad(chunk, (0, FRAME - len(chunk)))
-        await source.capture_frame(rtc.AudioFrame(chunk.tobytes(), RATE, 1, FRAME))
-        delay = t0 + (i + FRAME) / RATE - time.monotonic()
-        if delay > 0:
-            await asyncio.sleep(delay)
-
-
-async def silence(source, seconds):
-    await send(source, np.zeros(int(seconds * RATE), dtype=np.float32))
+    return await kokoro(client, SPEECH, text)
 
 
 async def main():
@@ -133,7 +88,7 @@ async def main():
         while not room.remote_participants and time.monotonic() - t_join < 15:
             await silence(source, 0.2)
         if not room.remote_participants:
-            print("FAIL: the voice worker did not join the room in 15 s. Is apps/voice running?")
+            print("FAIL: the voice worker did not join the room in 15 s. Is the voice worker (python -m orb_voice) running?")
             return 1
         print(f"agent joined after {time.monotonic() - t_join:.1f} s")
         await silence(source, 1.0)
@@ -222,7 +177,7 @@ async def main():
             t_said = time.monotonic()
             during = [x for x in ear.loud_times if t_cut < x < t_said]
             stop_after = (during[-1] - t_cut) if during else 0.0
-            # the guard needs about 550 ms of speech; then the audio already in the room drains
+            # the guard needs about 650 ms of speech; then the audio already in the room drains
             stopped = stop_after <= 1.5 and not [x for x in ear.loud_times if t_cut + 1.5 < x < t_said]
             await silence(source, 6)
             state = (await client.get(f"{AGENT}/v1/sessions/{s['id']}")).json()

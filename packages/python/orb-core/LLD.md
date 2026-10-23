@@ -1,6 +1,6 @@
 # LLD: orb-core (shared parts of every agent)
 
-Code: `src/orb_core/` · Tests: `tests/` (17) · Status: built · Last update: 2026-10-21
+Code: `src/orb_core/` · Tests: `tests/` (18) · Status: built · Last update: 2026-10-22
 
 **orb-core holds what every agent needs and no agent owns:** settings that never print a secret, the Jev
 reader, a streaming Ollama client, the agent interface with its session store, and a safe page loader.
@@ -39,6 +39,7 @@ reader, a streaming Ollama client, the agent interface with its session store, a
 | Jev price | $0.042 per million input tokens; cost = tokens / 10⁶ × 0.042 | the price that the old chat app used (2026-10-12); not checked again against TypeSafe's current price list |
 | Jev retries | 6, back-off 1 s to 30 s | chosen: a turn must survive a short API outage |
 | Ollama defaults | temperature 0.7, context 16,384 tokens, keep-alive 30 min, `think: false` | chosen; the persona sets the temperature per reply |
+| Ollama timing log | one line per reply: load, prompt tokens and seconds, reply tokens and seconds; never words | Ollama's last stream message; measured 2026-10-22: a new turn's prompt reads in 0.21 to 0.52 s on gemma4:e2b |
 | Live sessions | at most 200, least recently used evicted | chosen |
 | Page limits | 6,000,000 bytes read; 40,000 characters kept (about 10k tokens); 20 s timeout; 5 redirects | chosen: a long blog post fits Gemma's context with the chat |
 | Text block kept | headings always; other blocks of 30 or more characters | chosen: drops menu items and buttons |
@@ -48,10 +49,11 @@ reader, a streaming Ollama client, the agent interface with its session store, a
 |---|---|---|
 | `.env` syntax | comments, quotes, `export` and `a=b` values parse | `test_config.py::test_parse_env_text_handles_comments_quotes_and_export` |
 | Precedence | a set variable is never overwritten; empty values are skipped | `test_load_env_files_never_overrides_the_process` |
+| Only some keys | `load_env_prefixes` copies only the keys of the repo `.env` that start with a given prefix (the voice worker takes `ORB_` and `LIVEKIT_`, the speech service `CARTESIA_` and `ORB_CARTESIA_`), so other secrets in the file never enter that process | `test_load_env_prefixes_copies_only_the_chosen_keys_and_never_over_a_set_value` |
 | `describe` | "set" or "missing", never the value | `test_describe_never_returns_values` |
 | A missing required variable | the error names the variable | `test_env_required_names_the_variable_but_not_a_value` |
 | Secret names | KEY, TOKEN, SECRET, PASSWORD are secret | `test_is_secret` |
-| Repo root | the nearest folder with `go.work` | `test_repo_root_finds_go_work` |
+| Repo root | the nearest folder with `packages/python/orb-core` | `test_repo_root_finds_the_orb_core_folder` |
 | Protocols | test doubles satisfy `Agent` and `Session` | `test_agent.py::test_fakes_satisfy_the_protocols` |
 | Events | an unknown type is refused; JSON is stable | `test_event_rejects_unknown_types_and_serializes` |
 | Session IDs | `..`, spaces, capitals and long IDs are refused | `test_session_ids` |

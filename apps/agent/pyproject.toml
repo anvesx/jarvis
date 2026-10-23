@@ -7,10 +7,10 @@ name = "orb-agent"
 version = "0.1.0"
 description = "The orb agent service: one HTTP API for every channel, the web chat UI, and LiveKit tokens for voice."
 requires-python = ">=3.12"
-dependencies = ["orb-core>=0.1", "orb-discussion>=0.1", "fastapi>=0.110", "uvicorn>=0.30", "livekit-api>=1.0"]
+dependencies = ["orb-core>=0.1", "orb-discussion>=0.1", "orb-bench>=0.1", "fastapi>=0.110", "uvicorn>=0.30", "livekit-api>=1.0", "httpx>=0.27", "websockets>=13"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-orb_agent = ["static/*.html", "static/vendor/*.js"]
+orb_agent = ["static/*.html", "static/vendor/*.js", "static/vendor/*.txt"]

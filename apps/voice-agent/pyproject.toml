@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orb-voice-agent"
+version = "0.1.0"
+description = "The orb voice worker on LiveKit Agents: Silero VAD and LiveKit's local turn detector, with orb's speech and agent services."
+requires-python = ">=3.12"
+dependencies = [
+  "orb-core>=0.1",
+  "livekit-agents[silero]~=1.8.8",  # brings livekit-local-inference (turn detector v1-mini, LiveKit Model License)
+  "httpx>=0.27",
+  "numpy>=2",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

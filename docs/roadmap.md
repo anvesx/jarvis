@@ -1,6 +1,6 @@
 # Roadmap: from the discussion agent to Doc Brain
 
-Last update: 2026-10-21
+Last update: 2026-10-22
 
 **The goal:** a company-level "Doc Brain" that answers questions from a company's own documents, for example a
 CA firm that gets client questions about GST claims. Must-have features: a multi-agent interface, an onboarding
@@ -17,8 +17,34 @@ with a measurable exit check. A later iteration builds on the parts of the earli
 - One agent interface for every channel (decision 0002).
 - The discussion agent on the debt engine (decision 0004).
 - Local voice: Silero VAD, Whistle, Smart Turn, Kokoro, on the Go SDK (decision 0003).
+- Speech to text changed to Parakeet TDT 0.6B v3 on 2026-10-22: 57 % fewer word errors than Whistle on real
+  accented speech (decision 0005).
 - **Exit check, met:** 136 tests pass. The end-to-end voice test passes: right transcript, right personas,
   first agent audio 1.40 s and 2.11 s after the person stops, barge-in stops the audio.
+
+## Iteration 0.5 · Voice on LiveKit Agents, and the bench (done, 2026-10-22)
+- The voice worker is Python on LiveKit Agents, with LiveKit's Silero plugin and its local turn detector; the Go
+  worker, the Go SDK copy and Smart Turn are removed (decision 0006).
+- Each session can choose its STT, LLM and TTS. Whistle is the default STT; Kokoro stays the voice; maya1 and
+  indic-speak are bench engines (decision 0007).
+- orb-bench: git-ignored test audio (594 STT clips, noise, echo) and four scored suites. The bench tools and the chat
+  are tabs of one page, with one model bar that chooses the models of a chat (STT, LLM, TTS, voice).
+- Cartesia as an optional cloud STT choice (decision 0008).
+- Lower latency: a preflight transcript starts the reply early; the first TTS piece is short.
+- **Exit check, met:** 154 tests pass. `make e2e` passes 3 of 3: first agent audio 1.08 to 1.75 s, barge-in 0.79 to
+  1.03 s. Turn suite: p50 1.73 s, p90 1.93 s; no early replies on unfinished sentences; no turns from noise.
+
+## Iteration 0.6 · The call page, and sharing (2026-10-22; voice for other devices is open)
+- The first tab of the page is the call: an orb (LiveKit's Aura visualizer), live captions of the STT and the TTS, and two
+  buttons (Talk, New session). A session starts by itself when you press Talk.
+- The agent service serves this computer. A request from a tunnel or another device needs `ORB_SHARE_KEY`, and with no
+  key it is refused (decision 0009). The page says why voice cannot start from a device.
+- One address (the owner's ngrok domain) carries the page and the voice signal: the service forwards `/rtc` to the
+  LiveKit server that `dev.sh` runs here with its own keys.
+- **Exit check, met:** 189 tests pass. A call through the ngrok domain (headless Chrome, a fake microphone) connected,
+  the agent heard and answered. Through the real tunnel, every request without the key got 403.
+- **Open:** the audio of a device on another network. ngrok's free plan cannot carry it (a TCP endpoint needs a card, and
+  there is no UDP). Options: a card on the ngrok account plus a relay, LiveKit Cloud, a small public host, or a VPN.
 
 ## Iteration 1 · Knowledge: answers from documents
 **First principle:** an answer is only as good as its source, so every claim must point to a passage, and
@@ -65,12 +91,23 @@ with a measurable exit check. A later iteration builds on the parts of the earli
 ## Open items from iteration 0
 - **What the person heard.** After a barge-in, the agent service keeps the whole reply. The worker should report
   which sentences played, and the agent should keep only those.
-- **Faster voice turns.** Two changes would save about 0.4 to 0.8 s: start Kokoro on the first clause instead
-  of the first sentence, and start the Jev read on the final transcript, before the turn commits.
+- **Faster voice turns.** Done on 2026-10-22: a preflight transcript starts the Jev read and the reply 0.2 s after
+  the person stops, and Kokoro starts on a short first piece. The floor is now about 1.6 s. Next: a decision
+  that does not wait for the Jev read (about 0.5 s), which changes how the persona is chosen.
+- **Echo in real calls.** With no echo canceller, the agent's own voice becomes a turn (turn suite). Check a real
+  browser call on laptop speakers.
 - **Tune with real voices.** The VAD, the barge-in guard and the turn timing were fixed on 2026-10-22 from one real
   call and checked with synthetic speech. Next: record a few real calls with `ORB_DEBUG_AUDIO_DIR` (with consent)
   and replay the saved turns offline to tune the values.
-- **Bias the STT with the topic.** Whistle can favor given words (`keywords`). Passing the topic's words would fix
-  errors such as "database" heard as "day or base".
-- **An expressive voice.** Map each persona to a tone. Fish Audio's open model has the markers but a
-  non-commercial license (decision 0003).
+- **Bias the STT with the topic.** Topic words such as "database" are sometimes heard wrong ("day or base" with
+  Whistle). Whistle has a `keywords` option that the speech service does not use yet; Parakeet has none.
+- **Words from noise.** Whistle writes "Thank you." for hum and brown noise (11 of 24 noise clips), and Cartesia for
+  all of the first 12; Silero stopped every noise clip in the turn suite. Watch for it in real calls.
+- **Silent thinking of gemma4:e2b.** On short lines such as "Can you hear me clearly?" it writes 200 to 700 hidden
+  tokens first, so the first word comes after 3 to 11 s (browser test, 2026-10-22). Options: another default LLM
+  (the suite has the numbers), or a way to switch the thinking off for real.
+- **Cartesia over the realtime WebSocket.** The batch engine pays for the whole piece at each interim call. The
+  WebSocket bills each second once and gives interim text at a low delay (decision 0008).
+- **An expressive voice.** Map each persona to a tone. maya1 (emotion tags) and indic-speak (style tags) can do it
+  but are slower than real time on this Mac (decision 0007); Fish Audio's open model is non-commercial.
+- **A non-thinking Qwen.** Ollama's `qwen3:4b` is the thinking build; `qwen3:4b-instruct` would need a 2.5 GB pull.

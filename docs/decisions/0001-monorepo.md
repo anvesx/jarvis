@@ -1,6 +1,6 @@
 # 0001 · One monorepo, packages and apps
 
-Date: 2026-10-21 · Status: accepted
+Date: 2026-10-21 · Status: accepted · The Go modules and `go.work` were removed by 0006 (2026-10-22)
 
 ## Decision
 **orb is one repository with two kinds of folders.**

@@ -3,13 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>orb · discussion agent</title>
+<title>orb · discussion</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script>try { if (localStorage.getItem("orb-theme") === "light") document.documentElement.dataset.theme = "light"; } catch (e) {}</script>
 <style>
-/* Layout: chat on the left (log, composer, voice bar); the engine's view on the right (next move, promises, debts, last Jev call).
+/* One page: the model bar on top, then tabs. Talk: LiveKit's orb, the state in words, a Talk button and a New session
+   button; the conversation, the live voice numbers and the engine's view are folded under them. STT, TTS, LLM and
+   Suites: the bench tools.
    Dark by default: cool near-black surfaces, one blue accent. A light theme is one click away (data-theme="light"). */
 :root {
   color-scheme: dark;
@@ -35,23 +37,78 @@ html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-sans); font-size: 15px; line-height: 1.5;
        font-feature-settings: "tnum"; -webkit-font-smoothing: antialiased; }
 [hidden] { display: none !important; }
-button, input, textarea { font: inherit; color: inherit; }
+button, input, textarea, select { font: inherit; color: inherit; }
 ::selection { background: var(--accent-soft); color: var(--ink); }
 .eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.wrap { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+.mono { font-family: var(--f-mono); font-size: 12px; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); }
+.good { color: var(--ok); } .bad { color: var(--warn); }
+.wrap { height: 100%; display: grid; grid-template-rows: auto auto auto 1fr; }
 header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 12px 24px; border-bottom: 1px solid var(--line-strong); background: var(--bg); }
 header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
 header h1 em { font-family: var(--f-serif); font-weight: 400; color: var(--accent); }
-#topicline { flex: 1 1 280px; min-width: 0; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .chip { font-family: var(--f-mono); font-size: 11px; padding: 2px 8px; border: 1px solid var(--rule); color: var(--muted); background: transparent; }
+.chip.fixed { color: var(--ink-2); }
 .chip.ok { color: var(--ok); border-color: currentColor; }
 .chip.bad { color: var(--warn); border-color: currentColor; }
+.chip.info { color: var(--accent); border-color: currentColor; }
 button.chip { cursor: pointer; }
 button.chip:hover { color: var(--ink); border-color: var(--muted-2); }
-main { min-height: 0; display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
-#chat { min-height: 0; display: grid; grid-template-rows: 1fr auto auto; border-right: 1px solid var(--rule); background: var(--bg); }
-#log { overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+
+/* the model bar */
+.models { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 12px; padding: 10px 24px;
+          border-bottom: 1px solid var(--rule); background: var(--surface); }
+label.field { display: grid; gap: 3px; min-width: 0; }
+label.field select, label.field input { width: 100%; }
+select, input[type=text], input[type=number], textarea { border: 1px solid var(--line-strong); background: var(--field); color: var(--ink); padding: 7px 10px; border-radius: 0; min-width: 0; }
+input::placeholder, textarea::placeholder { color: var(--muted-2); }
+select:focus, input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#cloud-note { grid-column: 1 / -1; font-size: 13px; color: var(--warn); }
+#model-note { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+
+/* tabs */
+nav.tabs { display: flex; padding: 0 24px; border-bottom: 1px solid var(--rule); overflow-x: auto; background: var(--bg); }
+nav.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 16px; cursor: pointer; color: var(--muted); }
+nav.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
+main { min-height: 0; }
+
+/* buttons */
+.btn { padding: 8px 16px; border: 1px solid var(--line-strong); background: var(--card); color: var(--ink); cursor: pointer; border-radius: 0; font-weight: 500; }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn.primary { background: var(--primary-bg); border-color: var(--primary-bg); color: var(--primary-fg); }
+.btn:disabled { border-color: var(--rule); color: var(--muted-2); background: var(--surface); cursor: default; }
+.btn.live { background: var(--accent); border-color: var(--accent); color: var(--primary-fg); }
+
+/* the talk tab: an orb (LiveKit's Aura visualizer), the state in words, and two buttons; the details are folded away */
+#tab-chat { height: 100%; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 24px 24px 40px; }
+#stage { display: grid; justify-items: center; gap: 18px; width: 100%; max-width: 640px; padding-top: 8px; }
+.orb { --orb-size: clamp(170px, min(36vh, 70vw), 380px); width: var(--orb-size); height: var(--orb-size); position: relative; border-radius: 50%; }
+.orb canvas { display: block; width: 100%; height: 100%; }
+.orb.no-webgl { background: radial-gradient(circle at 50% 45%, rgba(31, 213, 249, .95), rgba(31, 213, 249, .35) 40%, rgba(31, 213, 249, 0) 68%);
+                animation: orb-breathe 3s ease-in-out infinite; }
+.orb.no-webgl[data-state="thinking"], .orb.no-webgl[data-state="connecting"], .orb.no-webgl[data-state="initializing"] { animation-duration: .8s; }
+.orb.no-webgl[data-state="speaking"] { animation-duration: .5s; }
+@keyframes orb-breathe { 50% { transform: scale(1.06); opacity: .8; } }
+.captions { display: grid; gap: 12px; width: 100%; max-width: 62ch; text-align: center; min-height: 7.5em; align-content: start; }
+.cap { display: grid; gap: 2px; justify-items: center; }
+.cap-who { font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-2); }
+.cap:has(.cap-text:empty) .cap-who { visibility: hidden; }  /* no words yet: no label */
+.cap-text { font-size: 17px; line-height: 1.4; color: var(--ink); }
+.cap-text.interim { color: var(--muted); }  /* the STT may still change these words */
+.cap.agent .cap-text { color: var(--accent); max-height: 8.4em; overflow-y: auto; scrollbar-width: none; }
+.orb-state { font-family: var(--f-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); min-height: 1.5em; }
+#vwarn { max-width: 52ch; text-align: center; }
+.stage-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.btn.talk { min-width: 150px; padding: 12px 32px; font-size: 16px; }
+#details { width: 100%; max-width: 1200px; border-top: 1px solid var(--rule); padding-top: 12px; }
+#details > summary { cursor: pointer; }
+.details-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); margin-top: 12px; border: 1px solid var(--rule); }
+#chat { min-width: 0; border-right: 1px solid var(--rule); background: var(--bg); }
+#log { max-height: 70vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+#side { min-width: 0; max-height: 70vh; overflow-y: auto; padding: 20px; display: grid; gap: 24px; align-content: start; background: var(--surface); }
+@media (prefers-reduced-motion: reduce) { .orb.no-webgl { animation: none; } }
 .msg { max-width: 72ch; display: grid; gap: 4px; }
 .msg .who { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .msg .who b { color: var(--accent); font-weight: 500; }
@@ -61,30 +118,8 @@ main { min-height: 0; display: grid; grid-template-columns: minmax(0, 7fr) minma
 .msg .cut { color: var(--warn); }
 .note { color: var(--muted); font-size: 13px; }
 .err { color: var(--warn); font-size: 14px; }
-#start { padding: 48px 24px; display: grid; gap: 16px; align-content: start; max-width: 720px; }
-#start h2 { margin: 0; font-size: 32px; font-weight: 500; letter-spacing: -.025em; line-height: 1.1; }
-#start h2 em { font-family: var(--f-serif); font-weight: 400; color: var(--accent); }
-#start p { margin: 0; color: var(--ink-2); max-width: 62ch; }
-.row { display: flex; gap: 8px; flex-wrap: wrap; }
-.row > input { flex: 1 1 320px; min-width: 0; }
-input[type=text], textarea { border: 1px solid var(--line-strong); background: var(--field); color: var(--ink); padding: 8px 12px; border-radius: 0; }
-input::placeholder, textarea::placeholder { color: var(--muted-2); }
-input[type=text]:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.btn { padding: 8px 16px; border: 1px solid var(--line-strong); background: var(--card); color: var(--ink); cursor: pointer; border-radius: 0; font-weight: 500; }
-.btn:hover:not(:disabled) { border-color: var(--muted); }
-.btn.primary { background: var(--primary-bg); border-color: var(--primary-bg); color: var(--primary-fg); }
-.btn:disabled { border-color: var(--rule); color: var(--muted-2); background: var(--surface); cursor: default; }
-.btn.live { background: var(--accent); border-color: var(--accent); color: var(--primary-fg); }
-.examples { display: flex; gap: 8px; flex-wrap: wrap; }
-.examples button { border: 1px solid var(--rule); background: var(--surface); padding: 4px 10px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
-.examples button:hover { border-color: var(--muted-2); color: var(--ink); }
-#composer { border-top: 1px solid var(--rule); padding: 12px 24px; display: flex; gap: 8px; align-items: flex-end; }
-#composer textarea { flex: 1; min-width: 0; resize: none; height: 64px; }
-#voicebar { border-top: 1px solid var(--rule); padding: 8px 24px; display: flex; gap: 12px; align-items: center; font-size: 14px; color: var(--ink-2); }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); flex: none; }
-.dot.listen { background: var(--ok); } .dot.you { background: var(--ink); } .dot.agent { background: var(--accent); }
-#side { min-height: 0; overflow-y: auto; padding: 24px; display: grid; gap: 28px; align-content: start; background: var(--surface); }
-#side section { display: grid; gap: 10px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+#side section { display: grid; gap: 10px; min-width: 0; }
 .persona { font-size: 26px; font-weight: 500; letter-spacing: -.02em; }
 .persona em { font-family: var(--f-serif); font-weight: 400; color: var(--accent); }
 .kv { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
@@ -117,137 +152,365 @@ input[type=text]:focus, textarea:focus, button:focus-visible { outline: 2px soli
 .q.yes .bar i { background: var(--accent); }
 .q .yn { font-family: var(--f-mono); font-size: 11px; color: var(--muted); text-align: right; }
 .q.yes .yn { color: var(--accent); }
-.small { font-size: 12px; color: var(--muted); }
 table.t { border-collapse: collapse; font-size: 13px; }
 table.t td { padding: 2px 12px 2px 0; }
-#log, #side { scrollbar-color: var(--line-strong) transparent; }
+.state { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+.state b { font-weight: 500; }
+.transcript { min-height: 40px; padding: 8px 10px; border-left: 2px solid var(--ink-2); white-space: pre-wrap; font-size: 14px; }
+.transcript .interim { color: var(--muted); }
+details summary { cursor: pointer; }
+
+#log, #side, .tool { scrollbar-color: var(--line-strong) transparent; }
+
+/* bench tool tabs */
+.tool { height: 100%; overflow-y: auto; padding: 20px 24px 48px; }
+.tool > .inner { max-width: 1200px; display: grid; gap: 16px; }
+.card { background: var(--card); border: 1px solid var(--rule); padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.tablewrap { overflow-x: auto; }
+.tablewrap table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.tablewrap th, .tablewrap td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule-2); vertical-align: top; }
+.tablewrap th { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.tablewrap td.num, .tablewrap th.num { text-align: right; font-family: var(--f-mono); font-size: 12px; }
+#side .tablewrap th, #side .tablewrap td { padding: 4px 6px; }
+.reply { padding: 10px 12px; border-left: 2px solid var(--accent); white-space: pre-wrap; color: var(--ink-2); min-height: 40px; }
+.log { max-height: 240px; overflow-y: auto; font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); }
+.log div { padding: 2px 0; border-bottom: 1px solid var(--rule-2); }
+.progress { font-family: var(--f-mono); font-size: 12px; color: var(--muted); white-space: pre-wrap; max-height: 160px; overflow-y: auto; }
+.error { color: var(--warn); }
+audio { height: 32px; max-width: 260px; }
 @media (max-width: 900px) {
-  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; overflow-y: auto; }
-  #chat { border-right: 0; } #log { max-height: 60vh; } #side { overflow: visible; }
+  .wrap { height: auto; min-height: 100%; }
+  #tab-chat { height: auto; overflow: visible; }
+  .details-grid { grid-template-columns: minmax(0, 1fr); }
+  #chat { border-right: 0; border-bottom: 1px solid var(--rule); }
   .debts { grid-template-columns: minmax(0, 1fr); }
+  .tool { height: auto; }
 }
+@media (max-width: 640px) { header, .models, nav.tabs, .tool, #tab-chat { padding-left: 16px; padding-right: 16px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>orb <em>discussion</em></h1>
-    <span id="topicline" class="small"></span>
-    <div class="chips"><span class="chip" id="c-llm">LLM</span><span class="chip" id="c-voice">Voice</span><button class="chip" id="theme" type="button" title="Switch the theme">Light</button></div>
+    <div class="chips">
+      <span class="chip info" id="c-session" hidden title="The models of this session"></span>
+      <span class="chip fixed" title="Fixed: LiveKit's Silero plugin">VAD · Silero</span>
+      <span class="chip fixed" title="Fixed: LiveKit turn detector v1-mini, on the CPU">Turn · LiveKit v1-mini</span>
+      <span class="chip" id="c-llm">LLM</span><span class="chip" id="c-voice">Voice</span>
+      <button class="chip" id="theme" type="button" title="Switch the theme">Light</button>
+    </div>
   </header>
+
+  <section class="models" aria-label="Models">
+    <label class="field"><span class="eyebrow">Speech to text</span><select id="m-stt"></select></label>
+    <label class="field"><span class="eyebrow">LLM</span><select id="m-llm"></select></label>
+    <label class="field"><span class="eyebrow">Text to speech</span><select id="m-tts"></select></label>
+    <label class="field"><span class="eyebrow">Voice</span><input type="text" id="m-voice" list="voices" placeholder="default"><datalist id="voices"></datalist></label>
+    <label class="field"><span class="eyebrow">Language</span><input type="text" id="m-lang" list="langs" placeholder="default"><datalist id="langs"></datalist></label>
+    <label class="field"><span class="eyebrow">Style</span><input type="text" id="m-style" list="styles" placeholder="none"><datalist id="styles"></datalist></label>
+    <div id="cloud-note" hidden></div>
+    <div id="model-note" hidden><span id="note-text"></span></div>
+  </section>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="chat" class="on">Talk</button>
+    <button data-tab="stt">STT</button>
+    <button data-tab="tts">TTS</button>
+    <button data-tab="llm">LLM</button>
+    <button data-tab="suites">Suites</button>
+  </nav>
+
   <main>
-    <section id="chat">
-      <div id="start">
-        <div class="eyebrow">New discussion</div>
-        <h2>An AI partner that does not just <em>agree</em></h2>
-        <p>Name a topic. Jev reads every message, the debt rules choose a persona for each reply, and a local model speaks. You can type, or talk.</p>
-        <div class="row"><input type="text" id="topic" placeholder="Should our personal assistant store user passwords?" maxlength="2000"><button class="btn primary" id="go" type="button">Start</button></div>
-        <div class="examples" id="examples"></div>
-      </div>
-      <div id="log" hidden></div>
-      <form id="composer" hidden>
-        <textarea id="text" placeholder="Your message. Enter sends it, Shift+Enter adds a line." maxlength="8000"></textarea>
-        <button class="btn primary" id="send" type="submit">Send</button>
-        <button class="btn" id="talk" type="button">Talk</button>
-      </form>
-      <div id="voicebar" hidden><span class="dot" id="vdot"></span><span id="vtext">Voice is off.</span></div>
-    </section>
+    <!-- Talk: an orb and two buttons. A session starts by itself when you press Talk. -->
+    <div class="panel" id="tab-chat">
+      <section id="stage" aria-label="Talk to the agent">
+        <div id="orb" class="orb" data-state="idle" role="img" aria-label="Voice orb: Press Talk to start"><canvas id="orb-canvas"></canvas></div>
+        <div id="orb-state" class="orb-state" role="status" aria-live="polite">Press Talk to start</div>
+        <div id="captions" class="captions" role="region" aria-label="Captions">
+          <div class="cap you" title="What the speech-to-text heard"><span class="cap-who" id="cap-you-who">You</span><span class="cap-text" id="cap-you"></span></div>
+          <div class="cap agent" title="What the text-to-speech says, as it is spoken"><span class="cap-who" id="cap-agent-who">Agent</span><span class="cap-text" id="cap-agent"></span></div>
+        </div>
+        <div class="err" id="vwarn" role="alert" hidden></div>
+        <div class="stage-actions">
+          <button class="btn primary talk" id="talk" type="button">Talk</button>
+          <button class="btn" id="new-session" type="button">New session</button>
+        </div>
+      </section>
+      <details id="details">
+        <summary class="eyebrow">Conversation, numbers and the engine's view</summary>
+        <div class="details-grid">
+          <section id="chat"><div id="log"></div></section>
     <aside id="side">
-      <section><div class="eyebrow">Next move</div><div id="move" class="small">Start a discussion to see what the engine decides.</div></section>
-      <section><div class="eyebrow">Six promises · due now = target · paid of owed = score</div><div class="prom" id="prom"></div></section>
-      <section><div class="eyebrow">Debts</div><div class="debts" id="debts"></div></section>
-      <section><div class="eyebrow">Last Jev call</div><div id="call" class="small">No call yet.</div></section>
-      <section><div class="eyebrow">Timing and cost</div><div id="timing" class="small">No turn yet.</div></section>
-    </aside>
+            <section id="vpanel" hidden>
+              <div class="eyebrow">Voice call</div>
+              <div class="state"><span>You: <b id="you">—</b></span><span>Agent: <b id="agent">—</b></span></div>
+              <div class="small mono" id="callinfo"></div>
+              <div class="transcript" id="heard"><span class="muted">Speak when you are ready.</span></div>
+              <div class="tablewrap"><table>
+                <thead><tr><th>#</th><th class="num" title="End of your speech to the turn commit">Turn end</th><th class="num" title="Jev reads your message">Jev</th>
+                  <th class="num" title="First token of the LLM, from its request">LLM</th><th class="num" title="First audio of the TTS">TTS</th>
+                  <th class="num" title="End of your speech to the first agent audio">Total</th><th>Persona</th></tr></thead>
+                <tbody id="turns"></tbody></table></div>
+              <details><summary class="small">Events</summary><div class="log" id="events"></div></details>
+            </section>
+            <section><div class="eyebrow">Next move</div><div id="move" class="small">Press Talk to see what the engine decides.</div></section>
+            <section><div class="eyebrow">Six promises · due now = target · paid of owed = score</div><div class="prom" id="prom"></div></section>
+            <section><div class="eyebrow">Debts</div><div class="debts" id="debts"></div></section>
+            <section><div class="eyebrow">Last Jev call</div><div id="jevcall" class="small">No call yet.</div></section>
+            <section><div class="eyebrow">Timing and cost</div><div id="timing" class="small">No turn yet.</div></section>
+          </aside>
+        </div>
+      </details>
+    </div>
+
+    <!-- STT -->
+    <div class="panel tool" id="tab-stt" hidden><div class="inner">
+      <div class="card">
+        <div class="eyebrow">Engines to compare</div>
+        <div class="row" id="stt-engines"></div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">A clip from the test audio</div>
+        <div class="row">
+          <label class="field"><span class="eyebrow">Group</span><select id="clip-group">
+            <option value="stt/synthetic">synthetic (Kokoro)</option><option value="stt/edacc">EdAcc (real, accented)</option>
+            <option value="stt/librispeech">LibriSpeech (read)</option><option value="noise">noise only</option><option value="echo">echo</option></select></label>
+          <label class="field" style="flex: 1 1 280px"><span class="eyebrow">Clip</span><select id="clip"></select></label>
+          <button class="btn" id="clip-play" type="button">Play</button>
+          <button class="btn primary" id="clip-run" type="button">Transcribe</button>
+        </div>
+        <div class="small" id="clip-ref"></div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Your voice</div>
+        <div class="row">
+          <label class="field" style="flex: 1 1 320px"><span class="eyebrow">What you will say (optional, for WER)</span><input type="text" id="rec-ref" placeholder="We should store user passwords in a vault."></label>
+          <button class="btn" id="rec" type="button">Record</button>
+        </div>
+      </div>
+      <div class="card"><div class="tablewrap"><table>
+        <thead><tr><th>Source</th><th>Engine</th><th>Text</th><th class="num">WER</th><th class="num">Model ms</th></tr></thead>
+        <tbody id="stt-rows"></tbody></table></div></div>
+    </div></div>
+
+    <!-- TTS -->
+    <div class="panel tool" id="tab-tts" hidden><div class="inner">
+      <div class="card">
+        <label class="field"><span class="eyebrow">Text (the engine, voice, language and style come from the bar above)</span>
+          <textarea id="tts-text" rows="3">Storing passwords in a plain file means anyone who reads the file can log in as your users.</textarea></label>
+        <div class="row"><button class="btn primary" id="speak" type="button">Speak</button>
+          <button class="btn" id="hi-sample" type="button">Hindi sample</button><span class="muted mono" id="tts-status"></span></div>
+      </div>
+      <div class="card"><div class="tablewrap"><table>
+        <thead><tr><th>Engine</th><th>Voice</th><th>Lang</th><th class="num">First audio</th><th class="num">Make time</th><th class="num">Audio</th><th class="num">RTF</th><th>Text</th></tr></thead>
+        <tbody id="tts-rows"></tbody></table></div></div>
+    </div></div>
+
+    <!-- LLM -->
+    <div class="panel tool" id="tab-llm" hidden><div class="inner">
+      <div class="card">
+        <label class="field"><span class="eyebrow">A voice turn for the LLM in the bar above (its own test session per model)</span>
+          <input type="text" id="llm-text" value="We should store user passwords in a plain JSON file so the assistant can log in for them."></label>
+        <div class="row"><button class="btn primary" id="ask" type="button">Send</button><button class="btn" id="llm-new" type="button">New session</button>
+          <span class="muted mono" id="llm-status"></span></div>
+        <div class="reply" id="llm-reply"></div>
+      </div>
+      <div class="card"><div class="tablewrap"><table>
+        <thead><tr><th>Model</th><th>Persona</th><th class="num">Jev read</th><th class="num">LLM first token</th><th class="num">LLM total</th><th>Checks</th></tr></thead>
+        <tbody id="llm-rows"></tbody></table></div></div>
+    </div></div>
+
+    <!-- Suites -->
+    <div class="panel tool" id="tab-suites" hidden><div class="inner">
+      <div class="card">
+        <div class="eyebrow">Run a suite on the test audio (one run at a time)</div>
+        <div class="row">
+          <button class="btn primary" data-suite="stt" type="button">STT suite</button>
+          <label class="field"><span class="eyebrow">Clips per group</span><input type="number" id="suite-limit" min="1" placeholder="all" style="width: 110px"></label>
+          <button class="btn primary" data-suite="tts" type="button">TTS suite</button>
+          <button class="btn primary" data-suite="llm" type="button">LLM suite</button>
+          <label class="field" style="flex: 1 1 220px"><span class="eyebrow">LLMs (comma list; empty: the bar's LLM)</span><input type="text" id="suite-models"></label>
+          <button class="btn primary" data-suite="turn" type="button">Turn suite</button>
+        </div>
+        <div class="small">STT compares the engines checked in the STT tab. The turn suite plays speech into a real room for about 4 minutes.</div>
+        <div class="progress" id="suite-progress"></div>
+      </div>
+      <div class="card">
+        <div class="row">
+          <label class="field"><span class="eyebrow">Suite</span><select id="res-suite"><option>stt</option><option>tts</option><option>llm</option><option>turn</option></select></label>
+          <label class="field" style="flex: 1 1 200px"><span class="eyebrow">Run</span><select id="res-run"></select></label>
+        </div>
+        <div class="tablewrap" id="results"><span class="muted">No run chosen.</span></div>
+      </div>
+    </div></div>
   </main>
 </div>
 <script src="/static/vendor/livekit-client.umd.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const sec = (v, d = 2) => v == null || isNaN(v) ? "—" : Number(v).toFixed(d);
+const pct = (v) => v == null ? "—" : (100 * v).toFixed(1) + " %";
 const PROMISES = ["Interaction", "Divergence", "Challenge", "Reflection", "Progression", "Resolution"];
 const WORDS = {Interaction: "Reply to the other side", Divergence: "More than one option", Challenge: "A reason for each claim",
                Reflection: "Change only for a reason", Progression: "No repeats, no stuck points", Resolution: "Close the points"};
-const EXAMPLES = ["Should our personal assistant store user passwords?", "Which language should we use for our new backend?",
-                  "Should a small CA firm move its client files to the cloud?"];
-let S = null, busy = false, room = null, poll = null, streaming = null;
+let S = null, room = null, poll = null;
+let engines = null, llmInfo = null;
 
 async function api(path, opts = {}) {
   const r = await fetch(path, {headers: {"content-type": "application/json"}, ...opts});
-  const data = await r.json().catch(() => ({}));
+  const text = await r.text();
+  let data; try { data = JSON.parse(text); } catch { data = {error: text}; }
   if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
   return data;
 }
 
+// --- theme and tabs ---
+function setTheme(light) {
+  if (light) document.documentElement.dataset.theme = "light"; else delete document.documentElement.dataset.theme;
+  $("theme").textContent = light ? "Dark" : "Light";
+  try { localStorage.setItem("orb-theme", light ? "light" : "dark"); } catch (e) {}
+}
+$("theme").onclick = () => setTheme(document.documentElement.dataset.theme !== "light");
+$("theme").textContent = document.documentElement.dataset.theme === "light" ? "Dark" : "Light";
+function openTab(name) {
+  document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x.dataset.tab === name));
+  document.querySelectorAll("main > .panel").forEach((p) => p.hidden = p.id !== "tab-" + name);
+  if (name === "suites") loadRuns();
+}
+document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => openTab(b.dataset.tab));
+
+// --- models: the bar, and the models of this chat ---
+function config() {  // a new chat or a bench test: only the fields that are set (empty = the service default)
+  const c = {stt_engine: $("m-stt").value, llm_model: $("m-llm").value, tts_engine: $("m-tts").value,
+             tts_voice: $("m-voice").value.trim(), tts_lang: $("m-lang").value.trim(), tts_style: $("m-style").value.trim()};
+  return Object.fromEntries(Object.entries(c).filter(([, v]) => v));
+}
+function voiceConfig() {  // for a running chat: every STT and TTS field, so an emptied field goes back to the default
+  return {stt_engine: $("m-stt").value, tts_engine: $("m-tts").value, tts_voice: $("m-voice").value.trim(),
+          tts_lang: $("m-lang").value.trim(), tts_style: $("m-style").value.trim()};
+}
+function fillVoices() {
+  // the voices, styles and languages of the chosen engine; a value that the engine does not have is cleared
+  const e = $("m-tts").value;
+  for (const [key, field, list] of [["voices", "m-voice", "voices"], ["styles", "m-style", "styles"], ["langs", "m-lang", "langs"]]) {
+    const v = (engines?.tts?.[key] || {})[e] || [];
+    $(list).innerHTML = v.map((x) => `<option value="${esc(x)}">`).join("");
+    const cur = $(field).value.trim().toLowerCase();
+    if (cur && v.length && !v.some((x) => x.toLowerCase() === cur) && !(key === "voices" && e === "maya1")) $(field).value = "";
+  }
+}
+function cloudNote() {  // the STT engine of the bar sends the audio of a call to another company
+  const e = $("m-stt").value, cloud = (engines?.stt?.cloud || []).includes(e);
+  $("cloud-note").hidden = !cloud;
+  $("cloud-note").textContent = cloud ? `${e} is a cloud service: the audio of your call is sent to it, and it bills for each second of audio.` : "";
+}
+async function loadModels() {
+  try {
+    engines = await api("/v1/speech/engines");
+    llmInfo = (await api("/v1/models")).llm;
+    const cloud = engines.stt.cloud || [], off = engines.stt.unavailable || {};
+    $("m-stt").innerHTML = engines.stt.engines.map((e) => `<option value="${esc(e)}" title="${esc(off[e] || "")}" ${off[e] ? "disabled" : ""}
+      ${e === engines.stt.model ? "selected" : ""}>${esc(e + (cloud.includes(e) ? (off[e] ? " (cloud, not set up)" : " (cloud)") : ""))}</option>`).join("");
+    $("m-tts").innerHTML = engines.tts.engines.map((e) => `<option ${e === engines.tts.model ? "selected" : ""}>${esc(e)}</option>`).join("");
+    $("m-llm").innerHTML = (llmInfo.installed.length ? llmInfo.installed : [llmInfo.default]).map((m) =>
+      `<option ${m === llmInfo.default ? "selected" : ""}>${esc(m)}</option>`).join("");
+    // a cloud engine sends the audio to another company and bills for it: it starts unchecked
+    $("stt-engines").innerHTML = engines.stt.engines.map((e) =>
+      `<label class="mono" title="${esc(off[e] || "")}"><input type="checkbox" value="${esc(e)}" ${cloud.includes(e) ? "" : "checked"}
+      ${off[e] ? "disabled" : ""}> ${esc(e)}${cloud.includes(e) ? " (cloud: sends the audio away)" : ""}</label>`).join("");
+    fillVoices(); cloudNote();
+  } catch (e) { note("The speech service or the agent service is not reachable: " + e.message); }
+}
+function sessionLlm() { return S?.config?.llm_model || llmInfo?.default || ""; }
+function showSessionModels() {
+  capLabels();
+  if (!S) { $("c-session").hidden = true; return; }
+  const c = S.config || {}, voice = c.tts_voice ? ` (${c.tts_voice.length > 20 ? c.tts_voice.slice(0, 20) + "…" : c.tts_voice})` : "";
+  $("c-session").textContent = `this session: stt ${c.stt_engine || engines?.stt?.model || "default"} · llm ${sessionLlm()} · tts ${c.tts_engine || engines?.tts?.model || "default"}${voice}`;
+  $("c-session").hidden = false;
+}
+function note(text) { $("model-note").hidden = !text; $("note-text").textContent = text; }
+async function barChanged(e) {
+  if (e?.target?.id === "m-tts") fillVoices();
+  if (e?.target?.id === "m-stt") cloudNote();
+  if (!S) { note(""); return; }  // no session yet: the bar applies when you press Talk
+  const llmDiffers = $("m-llm").value && $("m-llm").value !== sessionLlm();
+  try {
+    S.config = await api(`/v1/sessions/${encodeURIComponent(S.id)}/config`, {method: "PUT", body: JSON.stringify(voiceConfig())});
+    showSessionModels();
+    if (llmDiffers) note(`This session uses the LLM ${sessionLlm()}. Press New session to use ${$("m-llm").value}.`);
+    else note(room ? "The new speech models apply when you press Talk again." : "");
+  } catch (err) { note("The models did not change: " + err.message); }
+}
+["m-stt", "m-llm", "m-tts", "m-voice", "m-lang", "m-style"].forEach((id) => $(id).addEventListener("change", barChanged));
+
+// --- chat ---
+const LOCAL_HOSTS = ["127.0.0.1", "localhost", "[::1]", "::1"];
+// Why a call cannot start from this page: {text, hard} (hard: it can never start from here), or null when it can.
+// The server says what it knows (/v1/voice/status); the page adds what only the browser knows.
+function voiceBlock(v) {
+  if (!window.isSecureContext) return {hard: true, text: "This page is not secure, so the browser blocks the microphone. Open it with https, or open http://127.0.0.1:8100 on the computer that runs orb."};
+  if (!v) return {hard: true, text: "Voice is off on the server. Set LIVEKIT_URL in .env and restart."};
+  if (v.local && !v.proxy && !LOCAL_HOSTS.includes(location.hostname)) return {hard: true, text: `Voice cannot reach this device. The voice server (${v.url}) is on the computer that runs orb. Open orb on that computer, or give the voice server a public address (LIVEKIT_PUBLIC_URL).`};
+  if (v.livekit === false) return {hard: false, text: "The voice server (LiveKit) does not answer. Start it with scripts/dev.sh."};
+  if (v.worker === false) return {hard: false, text: "The voice worker does not run. Start it with scripts/dev.sh."};
+  return null;
+}
+// Where the browser opens the voice signal. A device that is not this computer cannot reach 127.0.0.1, so it uses the address of
+// this page: the service forwards /rtc to the voice server (v.proxy). The audio does not pass through the page address.
+function signalUrl(url) {
+  let host = "";
+  try { host = new URL(url.replace(/^ws/, "http")).hostname; } catch (e) {}
+  if (LOCAL_HOSTS.includes(host) && !LOCAL_HOSTS.includes(location.hostname)) return (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
+  return url;
+}
+function showVoice(v) {
+  const block = voiceIssue = voiceBlock(v);
+  updateOrb();
+  $("c-voice").textContent = block ? "Voice: not available" : (v.dev ? "Voice: local dev" : "Voice on");
+  $("c-voice").className = "chip " + (block ? "bad" : "ok");
+  $("c-voice").title = block ? block.text : signalUrl(v.url);
+  return block;
+}
 async function health() {
   try {
     const h = await api("/health");
     const llm = h.agents?.discussion?.llm;
-    $("c-llm").textContent = llm?.ok ? `LLM ${llm.model}` : "LLM not ready";
+    $("c-llm").textContent = llm?.ok ? "LLM service ok" : "LLM not ready";
     $("c-llm").className = "chip " + (llm?.ok ? "ok" : "bad");
-    $("c-voice").textContent = h.voice ? (h.voice.dev ? "Voice: local dev" : "Voice on") : "Voice off";
-    $("c-voice").className = "chip " + (h.voice ? "ok" : "bad");
-    $("talk").disabled = !h.voice;
+    const block = showVoice(h.voice);
+    warn(block ? block.text : "");
+    $("talk").disabled = !!block?.hard;
   } catch (e) { $("c-llm").textContent = "Server not reachable"; $("c-llm").className = "chip bad"; }
 }
-
-function showChat() {
-  $("start").hidden = true; $("log").hidden = false; $("composer").hidden = false; $("voicebar").hidden = false;
-  $("topicline").textContent = S.title + (S.source?.title ? ` · source: ${S.source.title}` : "") + (S.source?.error ? ` · the link did not load: ${S.source.error}` : "");
+function warn(text) { $("vwarn").textContent = text; $("vwarn").hidden = !text; }
+async function ensureSession() {  // a session starts by itself when you talk: no topic, no start screen
+  if (S) return S;
+  S = await api("/v1/sessions", {method: "POST", body: JSON.stringify({topic: "Open discussion", config: config()})});
+  note(""); render();
+  return S;
 }
-
-async function startSession(topic) {
-  try {
-    S = await api("/v1/sessions", {method: "POST", body: JSON.stringify({topic})});
-    history.replaceState(null, "", "?s=" + encodeURIComponent(S.id));
-    showChat(); render(); $("text").focus();
-  } catch (e) { alertLine(`The session did not start: ${e.message}`); }
+function clearView() {  // what the page shows before the first word of a session
+  turns = []; finals = []; interim = "";
+  renderLog(); renderTurns(); renderHeard();
+  $("move").innerHTML = '<div class="small">Press Talk to see what the engine decides.</div>';
+  $("prom").innerHTML = ""; $("debts").innerHTML = "";
+  $("jevcall").textContent = "No call yet."; $("timing").textContent = "No turn yet.";
+  $("events").innerHTML = ""; $("callinfo").textContent = ""; $("vpanel").hidden = true;
+  clearCaps(); showSessionModels();
 }
-
-async function loadSession(id) {
-  try { S = await api("/v1/sessions/" + encodeURIComponent(id)); showChat(); render(); }
-  catch (e) { history.replaceState(null, "", "/"); }
+async function newSession() {  // forget this session: the next press of Talk starts a new one with the models of the bar
+  if (room) await room.disconnect();
+  S = null; warn(""); note(""); clearView(); updateOrb();
 }
-
-function alertLine(text) {
-  const d = document.createElement("div"); d.className = "err"; d.textContent = text;
-  ($("log").hidden ? $("start") : $("log")).appendChild(d); $("log").scrollTop = 1e9;
-}
-
-async function send(text) {
-  if (busy || !text.trim() || !S) return;
-  busy = true; $("send").disabled = true;
-  streaming = {human: text, ai: "", persona: null};
-  render();
-  try {
-    const r = await fetch(`/v1/sessions/${encodeURIComponent(S.id)}/turns`, {method: "POST", headers: {"content-type": "application/json"},
-                          body: JSON.stringify({text, channel: "web"})});
-    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
-    const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
-    for (;;) {
-      const {value, done} = await reader.read(); if (done) break;
-      buf += dec.decode(value, {stream: true});
-      let i; while ((i = buf.indexOf("\n")) >= 0) {
-        const line = buf.slice(0, i); buf = buf.slice(i + 1); if (!line.trim()) continue;
-        const ev = JSON.parse(line);
-        if (ev.type === "decision") { streaming.persona = ev.data.name; renderLog(); }
-        else if (ev.type === "token") { streaming.ai += ev.data; renderLog(); }
-        else if (ev.type === "state") { S = ev.data; streaming = null; render(); }
-        else if (ev.type === "error") { streaming = null; await refresh(); alertLine(ev.data); }
-      }
-    }
-  } catch (e) { streaming = null; alertLine(`The connection failed: ${e.message}. Check that the agent service runs, then send the message again.`); }
-  streaming = null; busy = false; $("send").disabled = false; await refresh(); $("text").focus();
-}
-
 async function refresh() {
   if (!S) return;
   try { const d = await api(`/v1/sessions/${encodeURIComponent(S.id)}?since=${S.version}`); if (!d.unchanged) { S = d; render(); } }
   catch (e) {}
 }
-
 function turnFor(seq) { return (S.turns || []).find((t) => t.ai === seq); }
-
 function renderLog() {
   const out = [];
   for (const m of S?.messages || []) {
@@ -257,14 +520,9 @@ function renderLog() {
       out.push(`<div class="msg ai"><div class="who">AI · <b>${esc(t?.decision?.name || "")}</b> · ${m.id}${m.interrupted ? ' · <span class="cut">cut off</span>' : ""}</div><div class="text">${esc(m.text)}</div></div>`);
     }
   }
-  if (streaming) {
-    out.push(`<div class="msg human"><div class="who">You · sending</div><div class="text">${esc(streaming.human)}</div></div>`);
-    out.push(`<div class="msg ai"><div class="who">AI · <b>${esc(streaming.persona || "reading your message")}</b></div><div class="text">${esc(streaming.ai) || '<span class="note">Jev reads your message, then the model writes.</span>'}</div></div>`);
-  }
-  $("log").innerHTML = out.join("");
+  $("log").innerHTML = out.join("") || '<div class="note">The conversation appears here when you talk.</div>';
   $("log").scrollTop = 1e9;
 }
-
 function renderSide() {
   if (!S) return;
   const last = (S.turns || []).at(-1);
@@ -279,7 +537,7 @@ function renderSide() {
       <span class="k">Debt</span><span>${esc(d.debt || "none")} ${d.kind ? "· " + esc(d.kind) + " · " + esc(d.promise) : ""}</span></div>${track}${check}`;
   } else $("move").innerHTML = `<div class="small">No message yet.</div>${track}`;
 
-  const needDebt = last?.decision?.debt, needPromise = last?.decision?.promise;
+  const needPromise = last?.decision?.promise;
   $("prom").innerHTML = PROMISES.map((p) => { const s = S.scores[p];
     return `<div class="${s.due ? "" : "no-due"}${p === needPromise && S.need ? " need" : ""}"><b>${p}</b><span>${WORDS[p]}</span><span class="s">${s.due ? "Due now" : "Not due yet"}</span><span>${s.owed ? `${s.paid} of ${s.owed} paid` : "no debts yet"}</span></div>`; }).join("");
 
@@ -293,74 +551,714 @@ function renderSide() {
 
   const c = S.last_call;
   if (c && c.questions?.length) {
-    $("call").innerHTML = `<div class="small">${esc(c.id)} · ${c.speaker === "human" ? "person" : "AI"} · ${c.questions.length} questions · ${c.seconds ?? "?"} s · ${(c.tokens || 0).toLocaleString()} tokens</div>
+    $("jevcall").innerHTML = `<div class="small">${esc(c.id)} · ${c.speaker === "human" ? "person" : "AI"} · ${c.questions.length} questions · ${c.seconds ?? "?"} s · ${(c.tokens || 0).toLocaleString()} tokens</div>
       <div class="qs">${c.questions.map((q) => `<div class="q ${q.yes ? "yes" : ""}"><span>${esc(q.label)}</span><span class="bar"><i style="width:${Math.round((q.answer || 0) * 100)}%"></i></span><span class="yn">${(q.answer ?? 0).toFixed(2)}</span></div>`).join("")}</div>`;
-  } else if (c?.error) $("call").innerHTML = `<div class="err">${esc(c.error)}</div>`;
+  } else if (c?.error) $("jevcall").innerHTML = `<div class="err">${esc(c.error)}</div>`;
 
   const tm = last?.timing;
   $("timing").innerHTML = tm ? `<table class="t"><tr><td>Jev reads your message</td><td>${tm.read_human ?? "-"} s</td></tr>
     <tr><td>LLM first word</td><td>${tm.llm_first_token ?? "-"} s</td></tr><tr><td>LLM full reply</td><td>${tm.llm_total ?? "-"} s</td></tr>
     <tr><td>Jev reads the reply</td><td>${tm.read_ai ?? "-"} s</td></tr><tr><td>Jev tokens in this chat</td><td>${(S.tokens || 0).toLocaleString()} (about $${S.cost_usd})</td></tr></table>` : "No turn yet.";
 }
+function render() { renderLog(); renderSide(); showSessionModels(); }
 
-function render() { renderLog(); renderSide(); }
+// --- the orb: LiveKit's Aura audio visualizer, ported to plain JavaScript ---
+// Source: github.com/livekit/components-js, commit 1ce6ca0025 (Apache-2.0, Copyright LiveKit, Inc.; LiveKit designed the
+// visual in partnership with Unicorn Studio). The GLSL shader is from packages/shadcn/components/agents-ui/
+// agent-audio-visualizer-aura.tsx. The motion of each agent state (the table in ORB_LOOKS) is from hooks/agents-ui/
+// use-agent-audio-visualizer-aura.ts. License and notice: static/vendor/LICENSE-livekit-components-js.txt and
+// NOTICE-livekit-components-js.txt.
+// Changes: plain WebGL and requestAnimationFrame in place of React, ReactShaderToy and Motion; the volume comes from a Web
+// Audio analyser with the settings of LiveKit's useTrackVolume; the orb also swells a little with your own voice while
+// it listens; a lower pixel ratio and a frame limit, because the GPU is shared with the local LLM; a CSS orb when WebGL
+// is not available.
+const AURA_COLOR = [31 / 255, 213 / 255, 249 / 255];  // LiveKit's default color, #1FD5F9
+const AURA_HEAD = `precision highp float;
+uniform float iTime;
+uniform vec3 iResolution;
+uniform float uSpeed, uBlur, uScale, uShape, uFrequency, uAmplitude, uBloom, uMix, uSpacing, uColorShift, uVariance, uSmoothing, uMode;
+uniform vec3 uColor;
+`;
+const AURA_FS = `const float TAU = 6.283185;
 
-// --- voice ---
-function voiceState(kind, text) { $("vdot").className = "dot " + kind; $("vtext").textContent = text; }
+// Noise for dithering
+vec2 randFibo(vec2 p) {
+  p = fract(p * vec2(443.897, 441.423));
+  p += dot(p, p.yx + 19.19);
+  return fract((p.xx + p.yx) * p.xy);
+}
 
+// Tonemap
+vec3 Tonemap(vec3 x) {
+  x *= 4.0;
+  return x / (1.0 + x);
+}
+
+// Luma for alpha
+float luma(vec3 color) {
+  return dot(color, vec3(0.299, 0.587, 0.114));
+}
+
+// RGB to HSV
+vec3 rgb2hsv(vec3 c) {
+  vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+  vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+  vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+  float d = q.x - min(q.w, q.y);
+  float e = 1.0e-10;
+  return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+// HSV to RGB
+vec3 hsv2rgb(vec3 c) {
+  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+  return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+// SDF shapes
+float sdCircle(vec2 st, float r) {
+  return length(st) - r;
+}
+
+float sdLine(vec2 p, float r) {
+  float halfLen = r * 2.0;
+  vec2 a = vec2(-halfLen, 0.0);
+  vec2 b = vec2(halfLen, 0.0);
+  vec2 pa = p - a;
+  vec2 ba = b - a;
+  float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  return length(pa - ba * h);
+}
+
+float getSdf(vec2 st) {
+  if(uShape == 1.0) return sdCircle(st, uScale);
+  else if(uShape == 2.0) return sdLine(st, uScale);
+  return sdCircle(st, uScale); // Default
+}
+
+vec2 turb(vec2 pos, float t, float it) {
+  // Initial rotation matrix for swirl direction
+  mat2 rotation = mat2(0.6, -0.25, 0.25, 0.9);
+  // Secondary rotation applied each iteration (approx 53 degree rotation)
+  mat2 layerRotation = mat2(0.6, -0.8, 0.8, 0.6);
+
+  float frequency = mix(2.0, 15.0, uFrequency);
+  float amplitude = uAmplitude;
+  float frequencyGrowth = 1.4;
+  float animTime = t * 0.1 * uSpeed;
+
+  const int LAYERS = 4;
+  for(int i = 0; i < LAYERS; i++) {
+    // Calculate wave displacement for this layer
+    vec2 rotatedPos = pos * rotation;
+    vec2 wave = sin(frequency * rotatedPos + float(i) * animTime + it);
+
+    // Apply displacement along rotation direction
+    pos += (amplitude / frequency) * rotation[0] * wave;
+
+    // Evolve parameters for next layer
+    rotation *= layerRotation;
+    amplitude *= mix(1.0, max(wave.x, wave.y), uVariance);
+    frequency *= frequencyGrowth;
+  }
+
+  return pos;
+}
+
+const float ITERATIONS = 36.0;
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / iResolution.xy;
+
+  vec3 pp = vec3(0.0);
+  vec3 bloom = vec3(0.0);
+  float t = iTime * 0.5;
+  vec2 pos = uv - 0.5;
+
+  vec2 prevPos = turb(pos, t, 0.0 - 1.0 / ITERATIONS);
+  float spacing = mix(1.0, TAU, uSpacing);
+
+  for(float i = 1.0; i < ITERATIONS + 1.0; i++) {
+    float iter = i / ITERATIONS;
+    vec2 st = turb(pos, t, iter * spacing);
+    float d = abs(getSdf(st));
+    float pd = distance(st, prevPos);
+    prevPos = st;
+    float dynamicBlur = exp2(pd * 2.0 * 1.4426950408889634) - 1.0;
+    float ds = smoothstep(0.0, uBlur * 0.05 + max(dynamicBlur * uSmoothing, 0.001), d);
+
+    // Shift color based on iteration using uColorScale
+    vec3 color = uColor;
+    if(uColorShift > 0.01) {
+      vec3 hsv = rgb2hsv(color);
+      // Shift hue by iteration
+      hsv.x = fract(hsv.x + (1.0 - iter) * uColorShift * 0.3);
+      color = hsv2rgb(hsv);
+    }
+
+    float invd = 1.0 / max(d + dynamicBlur, 0.001);
+    pp += (ds - 1.0) * color;
+    bloom += clamp(invd, 0.0, 250.0) * color;
+  }
+
+  pp *= 1.0 / ITERATIONS;
+
+  vec3 color;
+
+  // Dark mode (default)
+  if(uMode < 0.5) {
+    // use bloom effect
+    bloom = bloom / (bloom + 2e4);
+    color = (-pp + bloom * 3.0 * uBloom) * 1.2;
+    color += (randFibo(fragCoord).x - 0.5) / 255.0;
+    color = Tonemap(color);
+    float alpha = luma(color) * uMix;
+    fragColor = vec4(color * uMix, alpha);
+  }
+
+  // Light mode
+  else {
+    // no bloom effect
+    color = -pp;
+    color += (randFibo(fragCoord).x - 0.5) / 255.0;
+
+    // Preserve hue by tone mapping brightness only
+    float brightness = length(color);
+    vec3 direction = brightness > 0.0 ? color / brightness : color;
+
+    // Reinhard on brightness
+    float factor = 2.0;
+    float mappedBrightness = (brightness * factor) / (1.0 + brightness * factor);
+    color = direction * mappedBrightness;
+
+    // Boost saturation to compensate for white background bleed-through
+    // When alpha < 1.0, white bleeds through making colors look desaturated
+    // So we increase saturation to maintain vibrant appearance
+    float gray = dot(color, vec3(0.2, 0.5, 0.1));
+    float saturationBoost = 3.0;
+    color = mix(vec3(gray), color, saturationBoost);
+
+    // Clamp between 0-1
+    color = clamp(color, 0.0, 1.0);
+
+    float alpha = mappedBrightness * clamp(uMix, 1.0, 2.0);
+    fragColor = vec4(color, alpha);
+  }
+}`;
+const AURA_MAIN = `
+void main(void) {
+  vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+  mainImage(color, gl_FragCoord.xy);
+  gl_FragColor = color;
+}`;
+const ORB_FPS = 30;          // the shader is heavy (36 steps of 4 layers for each pixel): 30 frames a second are enough
+const ORB_IDLE_FPS = 15;     // and 15 while there is no call: the GPU is better left to the LLM
+const ORB_PIXEL_RATIO = 1;   // and so is one pixel for each CSS pixel (LiveKit's limit is 2)
+const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function makeAura(canvas) {
+  const gl = canvas.getContext("webgl", {alpha: true, premultipliedAlpha: true, antialias: false, powerPreference: "low-power"});
+  if (!gl) return null;
+  const compile = (type, source) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, source); gl.compileShader(s);
+    if (gl.getShaderParameter(s, gl.COMPILE_STATUS)) return s;
+    console.error("orb shader:", gl.getShaderInfoLog(s));
+    return null;
+  };
+  const vs = compile(gl.VERTEX_SHADER, "attribute vec2 position; void main() { gl_Position = vec4(position, 0.0, 1.0); }");
+  const fs = compile(gl.FRAGMENT_SHADER, AURA_HEAD + AURA_FS + AURA_MAIN);
+  if (!vs || !fs) return null;
+  const program = gl.createProgram();
+  gl.attachShader(program, vs); gl.attachShader(program, fs); gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) { console.error("orb shader:", gl.getProgramInfoLog(program)); return null; }
+  gl.useProgram(program);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);  // one square, two triangles
+  const position = gl.getAttribLocation(program, "position");
+  gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+  const at = {};
+  for (const n of ["iTime", "iResolution", "uSpeed", "uBlur", "uScale", "uShape", "uFrequency", "uAmplitude", "uBloom", "uMix",
+                   "uSpacing", "uColorShift", "uVariance", "uSmoothing", "uMode", "uColor"]) at[n] = gl.getUniformLocation(program, n);
+  return {
+    draw(time, p, width, height) {
+      if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+      gl.viewport(0, 0, width, height);
+      gl.uniform1f(at.iTime, time); gl.uniform3f(at.iResolution, width, height, 1);
+      gl.uniform1f(at.uSpeed, p.speed); gl.uniform1f(at.uScale, p.scale); gl.uniform1f(at.uAmplitude, p.amplitude);
+      gl.uniform1f(at.uFrequency, p.frequency); gl.uniform1f(at.uMix, p.brightness); gl.uniform1f(at.uMode, p.light ? 1 : 0);
+      // the settings that LiveKit's component passes to its shader
+      gl.uniform1f(at.uBlur, 0.2); gl.uniform1f(at.uShape, 1); gl.uniform1f(at.uBloom, 0); gl.uniform1f(at.uSpacing, 0.5);
+      gl.uniform1f(at.uColorShift, 0.05); gl.uniform1f(at.uVariance, 0.1); gl.uniform1f(at.uSmoothing, 1);
+      gl.uniform3f(at.uColor, ...AURA_COLOR);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    },
+  };
+}
+
+// A number that moves to a target: ease out (Motion's default), a spring, or a pulse between two values.
+const easeOut = (p) => 1 - (1 - p) * (1 - p);
+function springAt(t, duration, bounce) {  // a damped spring that settles in `duration` seconds, from 0 to 1, with a small overshoot
+  const z = 1 - bounce, w0 = Math.log(100) / (z * duration), wd = w0 * Math.sqrt(1 - z * z), d = z * w0;
+  return 1 - Math.exp(-d * t) * (Math.cos(wd * t) + (d / wd) * Math.sin(wd * t));
+}
+class Tween {
+  constructor(v) { this.v = v; this.job = null; }
+  active() { return this.job !== null; }
+  ease(to, duration = 0.5) { this.job = {kind: "ease", from: this.v, to, duration, t: 0}; }
+  spring(to, duration = 1.0, bounce = 0.35) { this.job = {kind: "spring", from: this.v, to, duration, bounce, t: 0}; }
+  pulse(a, b, duration = 0.35) { this.job = {kind: "pulse", a, b, duration, t: 0}; }  // a to b to a ..., for ever
+  step(dt) {
+    const j = this.job;
+    if (!j) return;
+    j.t += dt;
+    if (j.kind === "pulse") {
+      const k = (j.t / j.duration) % 2;
+      this.v = j.a + (j.b - j.a) * easeOut(k < 1 ? k : 2 - k);
+      return;
+    }
+    const p = Math.min(1, j.t / j.duration);
+    this.v = p >= 1 ? j.to : j.from + (j.to - j.from) * (j.kind === "spring" ? springAt(j.t, j.duration, j.bounce) : easeOut(p));
+    if (p >= 1) this.job = null;
+  }
+}
+
+// How the orb moves in each agent state (the table of use-agent-audio-visualizer-aura.ts)
+const ORB_LOOKS = {
+  idle:      (o) => { o.speed = 10; o.scale.ease(0.2); o.amplitude.ease(1.2); o.frequency.ease(0.4); o.brightness.ease(1.0); },
+  listening: (o) => { o.speed = 20; o.scale.spring(0.3); o.amplitude.ease(1.0); o.frequency.ease(0.7); o.brightness.pulse(1.5, 2.0); },
+  thinking:  (o) => { o.speed = 30; o.scale.ease(0.3); o.amplitude.ease(0.5); o.frequency.ease(1.0); o.brightness.pulse(0.5, 2.5); },
+  speaking:  (o) => { o.speed = 70; o.scale.ease(0.3); o.amplitude.ease(0.75); o.frequency.ease(1.25); o.brightness.ease(1.5); },
+};
+const ORB_LOOK_OF = {idle: "idle", connecting: "thinking", initializing: "thinking", thinking: "thinking", listening: "listening", speaking: "speaking"};
+
+// The volume of an audio track, from 0 to 1, like LiveKit's useTrackVolume (fftSize 512, smoothing 0.55)
+const orbAudio = {ctx: null};
+function orbMeter(track) {
+  const ctx = orbAudio.ctx || (orbAudio.ctx = new AudioContext());
+  const source = ctx.createMediaStreamSource(new MediaStream([track])), analyser = ctx.createAnalyser();
+  analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.55; analyser.minDecibels = -100; analyser.maxDecibels = -80;
+  source.connect(analyser);  // not to the speakers: the track plays by its own element
+  const bytes = new Uint8Array(analyser.frequencyBinCount);
+  return {
+    volume() {
+      analyser.getByteFrequencyData(bytes);
+      let sum = 0;
+      for (const v of bytes) sum += v * v;
+      return Math.sqrt(sum / bytes.length) / 255;
+    },
+    close() { try { source.disconnect(); } catch (e) {} },
+  };
+}
+
+const orb = {
+  el: $("orb"), canvas: $("orb-canvas"), aura: null, look: "", start: performance.now(), last: 0, agentMeter: null, micMeter: null,
+  speed: 10, scale: new Tween(0.2), amplitude: new Tween(2), frequency: new Tween(0.5), brightness: new Tween(1.5),
+  setState(name) {
+    const look = ORB_LOOK_OF[name] || "listening";
+    if (look === this.look) return;  // connecting and initializing look alike: the pulse must not start again
+    this.look = look;
+    ORB_LOOKS[look](this);
+  },
+};
+function orbFrame(now) {
+  requestAnimationFrame(orbFrame);
+  if (!orb.aura || document.hidden || !orb.canvas.clientWidth) return;  // no orb on the screen: no drawing
+  if (now - orb.last < 1000 / (orb.look === "idle" ? ORB_IDLE_FPS : ORB_FPS) - 2) return;
+  const dt = Math.min(0.1, (now - orb.last) / 1000);
+  orb.last = now;
+  for (const t of [orb.scale, orb.amplitude, orb.frequency, orb.brightness]) t.step(dt);
+  if (orb.look === "speaking") {  // LiveKit: while the agent speaks, the size follows its volume
+    const volume = orb.agentMeter ? orb.agentMeter.volume() : 0;
+    if (volume > 0 && !orb.scale.active()) orb.scale.v = 0.2 + 0.2 * volume;
+  } else if (orb.look === "listening" && !orb.scale.active()) {  // and while it listens, it swells a little with your voice
+    orb.scale.v = 0.3 + 0.1 * (orb.micMeter ? orb.micMeter.volume() : 0);
+  }
+  const ratio = Math.min(window.devicePixelRatio || 1, ORB_PIXEL_RATIO);
+  orb.aura.draw((now - orb.start) / 1000 * (REDUCED_MOTION ? 0.25 : 1),
+                {speed: orb.speed, scale: orb.scale.v, amplitude: orb.amplitude.v, frequency: orb.frequency.v,
+                 brightness: orb.brightness.v, light: document.documentElement.dataset.theme === "light"},
+                Math.max(64, Math.round(orb.canvas.clientWidth * ratio)), Math.max(64, Math.round(orb.canvas.clientHeight * ratio)));
+}
+function orbStart() {
+  orb.aura = makeAura(orb.canvas);
+  if (!orb.aura) orb.el.classList.add("no-webgl");  // a plain CSS orb
+  orb.canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); orb.aura = null; orb.el.classList.add("no-webgl"); });
+  requestAnimationFrame(orbFrame);
+}
+
+// What the orb shows: the call, and the state that the voice agent publishes in its participant attributes
+const AGENT_STATE_ALIAS = {disconnected: "idle", failed: "idle", "pre-connect-buffering": "listening"};
+const agentStateOf = (p) => { const raw = (p && p.attributes && p.attributes["lk.agent.state"]) || ""; return AGENT_STATE_ALIAS[raw] || raw; };
+const ORB_TEXT = {idle: "Press Talk to start", connecting: "Connecting…", initializing: "The agent is joining…", listening: "Listening",
+                  thinking: "Thinking…", speaking: "Speaking"};
+// --- captions: what the STT heard and what the TTS speaks, from LiveKit's lk.transcription text streams ---
+// Your words: one stream for each update of the STT, with the whole text so far (interim until the last, which is final).
+// The agent's words: one stream for each reply, word by word in step with the audio, closed with final = true.
+const cap = {youSeg: "", agentSeg: "", agentText: ""};
+function showCap(who, text, interim) {
+  const el = $("cap-" + who);
+  el.textContent = text;
+  el.classList.toggle("interim", !!interim);
+  if (who === "agent") el.scrollTop = el.scrollHeight;  // a long reply: the words that are spoken now
+}
+function clearCaps() { cap.youSeg = cap.agentSeg = cap.agentText = ""; showCap("you", "", false); showCap("agent", "", false); }
+function capLabels() {  // which model made which text: useful when you compare models
+  const c = (S && S.config) || {};
+  $("cap-you-who").textContent = "You · heard by " + (c.stt_engine || (engines && engines.stt && engines.stt.model) || "the STT");
+  $("cap-agent-who").textContent = "Agent · spoken by " + (c.tts_engine || (engines && engines.tts && engines.tts.model) || "the TTS");
+}
+async function onTranscription(reader, sender, myIdentity) {
+  try {
+    const seg = (reader.info.attributes || {})["lk.segment_id"] || reader.info.id;
+    if (sender.identity === myIdentity) {  // my words
+      let text = "";
+      for await (const chunk of reader) text += chunk;
+      if (seg !== cap.youSeg) {  // the first words of a new turn: the last reply is old now
+        cap.youSeg = seg; cap.agentSeg = ""; cap.agentText = ""; showCap("agent", "", false);
+      }
+      showCap("you", text, (reader.info.attributes || {})["lk.transcription_final"] !== "true");
+      return;
+    }
+    if (seg !== cap.agentSeg) { cap.agentSeg = seg; cap.agentText = ""; }  // a new reply
+    for await (const chunk of reader) { cap.agentText += chunk; showCap("agent", cap.agentText, false); }
+  } catch (e) { event("a caption stream failed: " + e.message); }
+}
+let callState = "off", agentState = "", userSpeaking = false, agentSeen = false;  // off, connecting or live
+let voiceIssue = null;  // why a call cannot start (see voiceBlock); the orb says so, because a phone shows only the top of the page
+function updateOrb() {
+  const wanted = callState === "off" ? "idle" : callState === "connecting" ? "connecting" : agentState || "initializing";
+  const name = ORB_TEXT[wanted] ? wanted : "listening";  // a state of a later agent version: treat it as listening
+  orb.setState(name);
+  const text = callState === "off" && voiceIssue ? (voiceIssue.hard ? "Voice is not available here" : "Voice is not ready")
+    : name === "listening" && userSpeaking ? "Hearing you…" : ORB_TEXT[name];
+  $("orb-state").textContent = text;
+  orb.el.dataset.state = name;
+  orb.el.setAttribute("aria-label", "Voice orb: " + text);
+}
+
+// --- voice: the call, and the worker's events (topic "orb.bench") for the numbers in the details ---
+let turns = [], interim = "", finals = [];
+function event(line) {
+  const d = document.createElement("div");
+  d.textContent = new Date().toLocaleTimeString() + "  " + line;
+  $("events").prepend(d);
+  while ($("events").children.length > 200) $("events").lastChild.remove();
+}
+function renderTurns() {
+  $("turns").innerHTML = turns.map((t, i) => `<tr><td>${i + 1}</td><td class="num">${sec(t.eou)}</td><td class="num">${sec(t.read)}</td>
+    <td class="num">${sec(t.ttft)}</td><td class="num">${sec(t.ttfb)}</td><td class="num"><b>${sec(t.e2e)}</b></td><td>${esc(t.persona || "")}</td></tr>`).join("");
+}
+function renderHeard() {
+  $("heard").innerHTML = esc(finals.slice(-6).join(" ")) + (interim ? ` <span class="interim">${esc(interim)}</span>` : "") ||
+    '<span class="muted">Nothing yet.</span>';
+}
+function lastTurn(field) { let t = turns[turns.length - 1]; if (!t || t[field] != null) { t = {}; turns.push(t); } return t; }
+function onBench(e) {
+  if (e.type === "metrics") {
+    const m = e.metrics || {};
+    if (m.type === "eou_metrics") turns.push({eou: m.end_of_utterance_delay, transcription: m.transcription_delay});
+    else if (m.type === "llm_metrics") lastTurn("ttft").ttft = m.ttft;
+    else if (m.type === "tts_metrics") { const t = turns[turns.length - 1]; if (t && t.ttfb == null) t.ttfb = m.ttfb; }
+    else return;
+    const numbers = Object.fromEntries(Object.entries(m).filter(([k, v]) => typeof v === "number" && !/timestamp/.test(k)));
+    renderTurns(); event(`${m.type} ${JSON.stringify(numbers)}`);
+    return;
+  }
+  if (e.type === "turn_latency") { const t = turns[turns.length - 1] || lastTurn("e2e"); t.e2e = e.e2e; renderTurns(); }
+  else if (e.type === "agent_read") { const t = turns[turns.length - 1]; if (t) t.read = e.seconds; renderTurns(); }
+  else if (e.type === "agent_decision") { const t = turns[turns.length - 1]; if (t) t.persona = e.persona; renderTurns(); }
+  else if (e.type === "transcript") { if (e.final) { finals.push(e.text); interim = ""; } else interim = e.text; renderHeard(); }
+  else if (e.type === "agent_reply") {  // chars 0: the LLM wrote no words, so the agent stays silent for this turn
+    $("vwarn").hidden = e.chars > 0;
+    $("vwarn").textContent = e.chars > 0 ? "" : "The LLM wrote no words for this turn. Say it again, or choose another LLM.";
+  }
+  else if (e.type === "agent_state") $("agent").textContent = e.state;
+  else if (e.type === "user_state") $("you").textContent = e.state;
+  else if (e.type === "session") $("callinfo").textContent = `stt ${e.stt} · llm ${e.llm} · tts ${e.tts} (${e.voice}) · vad ${e.vad} · turn ${e.turn}`;
+  event(`${e.type} ${JSON.stringify(Object.fromEntries(Object.entries(e).filter(([k]) => !["type", "t", "text"].includes(k))))}`);
+}
 async function talk() {
   if (room) { await room.disconnect(); return; }
   const LK = window.LivekitClient;
-  if (!LK) { alertLine("The LiveKit client did not load."); return; }
-  $("talk").disabled = true; voiceState("", "Connecting…");
+  if (!LK) { warn("The LiveKit client did not load."); return; }
+  try {  // ask again: the voice server or the worker may have started since the page loaded
+    const block = showVoice(await api("/v1/voice/status"));
+    if (block) { warn(block.text); return; }
+  } catch (e) { /* the call below reports a server that does not answer */ }
+  $("talk").disabled = true; $("new-session").disabled = true; warn("");
+  callState = "connecting"; agentState = ""; userSpeaking = false; agentSeen = false; updateOrb();
+  if (!orbAudio.ctx) orbAudio.ctx = new AudioContext();
+  orbAudio.ctx.resume().catch(() => {});  // this click lets the browser measure and play audio
+  let voiceUrl = "";
   try {
+    await ensureSession();
+    // the voice worker reads the session's speech models when it joins: save the bar's choice first
+    const save = () => api(`/v1/sessions/${encodeURIComponent(S.id)}/config`, {method: "PUT", body: JSON.stringify(voiceConfig())});
+    try { S.config = await save(); }
+    catch (e) {  // the agent service restarted and forgot the session: start a new one
+      if (!/no session/i.test(e.message)) throw e;
+      S = null; await ensureSession(); S.config = await save();
+    }
+    showSessionModels();
     const t = await api("/v1/voice/token", {method: "POST", body: JSON.stringify({session_id: S.id})});
-    room = new LK.Room({adaptiveStream: true, dynacast: true});
-    room.on(LK.RoomEvent.TrackSubscribed, (track) => {
-      if (track.kind === "audio") { const el = track.attach(); el.hidden = true; document.body.appendChild(el); }
+    voiceUrl = signalUrl(t.url);
+    turns = []; finals = []; interim = ""; renderTurns(); renderHeard(); $("events").innerHTML = ""; $("callinfo").textContent = "";
+    $("you").textContent = "—"; $("agent").textContent = "—"; $("vpanel").hidden = false; clearCaps();
+    const r = new LK.Room({adaptiveStream: true, dynacast: true});
+    room = r;
+    r.registerTextStreamHandler("lk.transcription", (reader, sender) => onTranscription(reader, sender, r.localParticipant.identity));
+    r.on(LK.RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind !== "audio") return;
+      const el = track.attach(); el.hidden = true; document.body.appendChild(el);
+      if (orb.agentMeter) orb.agentMeter.close();
+      orb.agentMeter = orbMeter(track.mediaStreamTrack);  // after attach: a remote track needs its element to feed Web Audio
     });
-    room.on(LK.RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => el.remove()));
-    room.on(LK.RoomEvent.ParticipantConnected, () => voiceState("listen", "The agent joined. Speak when you are ready."));
-    room.on(LK.RoomEvent.ActiveSpeakersChanged, (speakers) => {
-      const me = speakers.some((p) => p.isLocal), agent = speakers.some((p) => !p.isLocal);
-      if (agent) voiceState("agent", "The agent speaks. Start to talk to interrupt it.");
-      else if (me) voiceState("you", "You speak…");
-      else voiceState("listen", "Listening.");
+    r.on(LK.RoomEvent.TrackUnsubscribed, (track) => {
+      track.detach().forEach((el) => el.remove());
+      if (track.kind === "audio" && orb.agentMeter) { orb.agentMeter.close(); orb.agentMeter = null; }
     });
-    room.on(LK.RoomEvent.Disconnected, () => {
-      room = null; clearInterval(poll); poll = null; $("talk").textContent = "Talk"; $("talk").className = "btn";
-      voiceState("", "Voice is off."); refresh();
+    r.on(LK.RoomEvent.ParticipantConnected, (p) => { agentSeen = true; agentState = agentStateOf(p); updateOrb(); });
+    r.on(LK.RoomEvent.ParticipantDisconnected, () => { agentState = ""; updateOrb(); });
+    r.on(LK.RoomEvent.ParticipantAttributesChanged, (changed, p) => {
+      if ("lk.agent.state" in changed) { agentState = agentStateOf(p); updateOrb(); }
     });
-    await room.connect(t.url, t.token);
-    await room.startAudio();
+    r.on(LK.RoomEvent.ActiveSpeakersChanged, (speakers) => { userSpeaking = speakers.some((p) => p.isLocal); updateOrb(); });
+    r.on(LK.RoomEvent.DataReceived, (payload, participant, kind, topic) => {
+      if (topic !== "orb.bench") return;
+      try { onBench(JSON.parse(new TextDecoder().decode(payload))); } catch (e) {}
+    });
+    r.on(LK.RoomEvent.Disconnected, () => {
+      if (room === r) room = null;
+      callState = "off"; agentState = ""; userSpeaking = false;
+      for (const k of ["agentMeter", "micMeter"]) { if (orb[k]) orb[k].close(); orb[k] = null; }
+      clearInterval(poll); poll = null;
+      $("talk").textContent = "Talk"; $("talk").className = "btn primary talk";
+      updateOrb(); event("call ended"); refresh();
+    });
+    await r.connect(voiceUrl, t.token);
+    await r.startAudio();
     // the browser removes the agent's own voice (echo), room noise and level jumps before the audio leaves
-    await room.localParticipant.setMicrophoneEnabled(true, {echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1});
-    voiceState("listen", room.remoteParticipants.size ? "Listening." : "Connected. Waiting for the agent to join…");
-    $("talk").textContent = "Hang up"; $("talk").className = "btn live";
-    poll = setInterval(refresh, 700);
+    await r.localParticipant.setMicrophoneEnabled(true, {echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1});
+    const mic = r.localParticipant.getTrackPublication(LK.Track.Source.Microphone);
+    if (mic && mic.track) orb.micMeter = orbMeter(mic.track.mediaStreamTrack);
+    for (const p of r.remoteParticipants.values()) { agentSeen = true; agentState = agentStateOf(p); }
+    callState = "live"; updateOrb();
+    $("talk").textContent = "Hang up"; $("talk").className = "btn live talk";
+    poll = setInterval(refresh, LOCAL_HOSTS.includes(location.hostname) ? 700 : 3000);  // through a tunnel: fewer requests
+    setTimeout(() => { if (room === r && !agentSeen) warn("The voice agent did not join. Check that the voice worker runs."); }, 15000);
   } catch (e) {
-    room = null; voiceState("", "Voice is off."); alertLine(`Voice did not start: ${e.message}. Check that livekit-server and the voice worker run.`);
+    callState = "off";
+    if (room) room.disconnect().catch(() => {});
+    room = null; updateOrb();
+    warn(/pc connection/i.test(e.message)
+      ? "The voice signal works, but the audio could not reach the computer that runs orb. A device needs a network path to it: the same network, or a media relay (decision 0009)."
+      : `Voice did not start: ${e.message}. The voice server is ${voiceUrl || "not known yet"}. Check that it and the voice worker run.`);
   }
-  $("talk").disabled = false;
+  $("talk").disabled = false; $("new-session").disabled = false;
 }
 
-$("go").onclick = () => startSession($("topic").value.trim() || $("topic").placeholder);
-$("topic").addEventListener("keydown", (e) => { if (e.key === "Enter") $("go").click(); });
-$("examples").innerHTML = EXAMPLES.map((x) => `<button type="button">${esc(x)}</button>`).join("");
-$("examples").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) startSession(b.textContent); });
-$("composer").addEventListener("submit", (e) => { e.preventDefault(); const t = $("text").value; $("text").value = ""; send(t); });
-$("text").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("composer").requestSubmit(); } });
 $("talk").onclick = talk;
-function setTheme(light) {
-  if (light) document.documentElement.dataset.theme = "light"; else delete document.documentElement.dataset.theme;
-  $("theme").textContent = light ? "Dark" : "Light";
-  try { localStorage.setItem("orb-theme", light ? "light" : "dark"); } catch (e) {}
+$("new-session").onclick = newSession;
+
+// --- simple WER in the page (lower case, no punctuation) ---
+function words(s) { return (s || "").toLowerCase().replace(/[^\p{L}\p{N}\p{M}' ]+/gu, " ").split(/\s+/).filter(Boolean); }
+function werOf(ref, hyp) {
+  const r = words(ref), h = words(hyp); if (!r.length) return null;
+  let prev = [...Array(h.length + 1).keys()];
+  for (let i = 1; i <= r.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= h.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (r[i - 1] === h[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[h.length] / r.length;
 }
-$("theme").onclick = () => setTheme(document.documentElement.dataset.theme !== "light");
-$("theme").textContent = document.documentElement.dataset.theme === "light" ? "Dark" : "Light";
+
+// --- STT tab ---
+const sttEngines = () => [...document.querySelectorAll("#stt-engines input:checked")].map((x) => x.value);
+let clips = [];
+async function loadClips() {
+  try { clips = await api(`/v1/bench/corpus/${$("clip-group").value}`); }
+  catch (e) { clips = []; $("clip-ref").textContent = e.message; }
+  $("clip").innerHTML = clips.slice(0, 400).map((c) => `<option value="${esc(c.id)}">${esc(c.id)} — ${esc((c.ref || "(no speech)").slice(0, 60))}</option>`).join("");
+  showRef();
+}
+function showRef() { const c = clips.find((x) => x.id === $("clip").value); if (c) $("clip-ref").textContent = `Reference: ${c.ref || "(no speech: any word is invented)"}`; }
+$("clip-group").onchange = loadClips; $("clip").onchange = showRef;
+$("clip-play").onclick = () => { const c = clips.find((x) => x.id === $("clip").value); if (c) new Audio(`/v1/bench/clip/${$("clip-group").value}/${encodeURIComponent(c.path)}`).play(); };
+function sttRow(source, engine, d) {
+  $("stt-rows").insertAdjacentHTML("afterbegin", `<tr><td class="mono">${esc(source)}</td><td>${esc(engine)}</td><td>${esc(d.text ?? d.error)}</td>
+    <td class="num">${pct(d.wer)}</td><td class="num">${sec(d.ms, 0)}</td></tr>`);
+}
+$("clip-run").onclick = async () => {
+  for (const engine of sttEngines()) {
+    try { sttRow($("clip").value, engine, await api("/v1/bench/stt", {method: "POST", body: JSON.stringify({group: $("clip-group").value, id: $("clip").value, engine})})); }
+    catch (e) { sttRow($("clip").value, engine, {error: e.message}); }
+  }
+};
+let rec = null;
+$("rec").onclick = async () => {
+  if (!rec) {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1}});
+    const ctx = new AudioContext(), src = ctx.createMediaStreamSource(stream), proc = ctx.createScriptProcessor(4096, 1, 1), chunks = [];
+    proc.onaudioprocess = (e) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    src.connect(proc); proc.connect(ctx.destination);
+    rec = {stream, ctx, proc, chunks}; $("rec").textContent = "Stop"; $("rec").className = "btn live";
+    return;
+  }
+  const {stream, ctx, proc, chunks} = rec; rec = null; $("rec").textContent = "Record"; $("rec").className = "btn";
+  stream.getTracks().forEach((t) => t.stop()); proc.disconnect();
+  const n = chunks.reduce((a, c) => a + c.length, 0), all = new Float32Array(n);
+  let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate); buf.copyToChannel(all, 0); await ctx.close();
+  const off = new OfflineAudioContext(1, Math.ceil(n * 16000 / buf.sampleRate), 16000);
+  const s = off.createBufferSource(); s.buffer = buf; s.connect(off.destination); s.start();
+  const x = (await off.startRendering()).getChannelData(0), pcm = new Int16Array(x.length);
+  for (let i = 0; i < x.length; i++) pcm[i] = Math.max(-1, Math.min(1, x[i])) * 32767;
+  for (const engine of sttEngines()) {
+    try {
+      const r = await fetch(`/v1/speech/stt?engine=${encodeURIComponent(engine)}&sample_rate=16000&language=en`, {method: "POST", body: pcm.buffer});
+      const d = await r.json(); if (!r.ok) throw new Error(d.error);
+      sttRow("your voice", engine, {...d, wer: $("rec-ref").value.trim() ? werOf($("rec-ref").value, d.text) : null});
+    } catch (e) { sttRow("your voice", engine, {error: e.message}); }
+  }
+};
+
+// --- TTS tab: play as it arrives, and time the first audio ---
+$("hi-sample").onclick = () => { $("tts-text").value = "नमस्ते, आप कैसे हैं? मैं कल office जा रहा हूँ, meeting है।"; $("m-lang").value = "hi"; };
+$("speak").onclick = async () => {
+  const c = config(), body = {text: $("tts-text").value, engine: c.tts_engine, voice: c.tts_voice, lang: c.tts_lang, style: c.tts_style};
+  $("speak").disabled = true; $("tts-status").textContent = "making…";
+  const ctx = new AudioContext(), t0 = performance.now();
+  try {
+    const r = await fetch("/v1/speech/tts", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body)});
+    if (!r.ok) throw new Error((await r.json()).error);
+    const rate = +r.headers.get("x-sample-rate") || 24000, reader = r.body.getReader();
+    let first = null, at = ctx.currentTime + 0.05, rest = new Uint8Array(0), samples = 0;
+    for (;;) {
+      const {value, done} = await reader.read(); if (done) break;
+      if (first === null) first = (performance.now() - t0) / 1000;
+      const all = new Uint8Array(rest.length + value.length); all.set(rest); all.set(value, rest.length);
+      const n = Math.floor(all.length / 2); rest = all.slice(n * 2);
+      if (!n) continue;
+      const v = new DataView(all.buffer, 0, n * 2), f = new Float32Array(n);
+      for (let i = 0; i < n; i++) f[i] = v.getInt16(i * 2, true) / 32768;
+      const b = ctx.createBuffer(1, n, rate); b.copyToChannel(f, 0);
+      const s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination);
+      at = Math.max(at, ctx.currentTime); s.start(at); at += n / rate; samples += n;
+    }
+    const total = (performance.now() - t0) / 1000, audioS = samples / rate;
+    $("tts-rows").insertAdjacentHTML("afterbegin", `<tr><td>${esc(r.headers.get("x-engine") || c.tts_engine || "default")}</td><td>${esc(c.tts_voice || "default")}</td>
+      <td>${esc(c.tts_lang || "default")}</td><td class="num">${sec(first)} s</td><td class="num">${sec(total)} s</td><td class="num">${sec(audioS, 1)} s</td>
+      <td class="num">${sec(total / audioS)}</td><td>${esc(body.text.slice(0, 80))}</td></tr>`);
+    $("tts-status").textContent = `first audio ${sec(first)} s`;
+  } catch (e) { $("tts-status").textContent = "error: " + e.message; }
+  $("speak").disabled = false;
+};
+
+// --- LLM tab: a voice turn, streamed, in a test session per model ---
+let llmSession = {model: null, id: null};
+const LEAK = /\b(persona|need|debt|stage|why|note)\s*:|\[|NOTE_END/i;
+$("llm-new").onclick = () => { llmSession = {model: null, id: null}; $("llm-status").textContent = "a new session starts with the next turn"; };
+$("ask").onclick = async () => {
+  const model = $("m-llm").value;
+  $("ask").disabled = true; $("llm-reply").textContent = ""; $("llm-status").textContent = "…";
+  try {
+    if (llmSession.model !== model) {
+      const s = await api("/v1/sessions", {method: "POST", body: JSON.stringify({topic: "Bench LLM", config: {llm_model: model}})});
+      llmSession = {model, id: s.id};
+    }
+    const t0 = performance.now();
+    const r = await fetch(`/v1/sessions/${llmSession.id}/turns`, {method: "POST", headers: {"content-type": "application/json"},
+                                                                 body: JSON.stringify({text: $("llm-text").value, channel: "voice"})});
+    if (!r.ok) throw new Error((await r.json()).error);
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = "", reply = "", persona = "", timing = {}, first = null;
+    for (;;) {
+      const {value, done} = await reader.read(); if (done) break;
+      buf += dec.decode(value, {stream: true});
+      let i; while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (!line) continue;
+        const e = JSON.parse(line);
+        if (e.type === "token") { first ??= (performance.now() - t0) / 1000; reply += e.data; $("llm-reply").textContent = reply; }
+        else if (e.type === "decision") persona = e.data.persona;
+        else if (e.type === "reply") timing = e.data.timing || {};
+        else if (e.type === "error") throw new Error(e.data);
+      }
+    }
+    const sentences = (reply.match(/[.!?](\s|$)/g) || []).length || (reply.trim() ? 1 : 0);
+    const checks = [reply.trim() ? "reply" : "NO REPLY", sentences <= 3 && reply.length <= 400 ? "short" : "TOO LONG", LEAK.test(reply) ? "LEAK" : "no leak"];
+    $("llm-rows").insertAdjacentHTML("afterbegin", `<tr><td>${esc(model)}</td><td>${esc(persona)}</td><td class="num">${sec(timing.read_human)}</td>
+      <td class="num">${sec(timing.llm_first_token)}</td><td class="num">${sec(timing.llm_total)}</td><td>${checks.map((c) => `<span class="${/[A-Z]{2}/.test(c) ? "bad" : "good"}">${c}</span>`).join(" · ")}</td></tr>`);
+    $("llm-status").textContent = `session ${llmSession.id}`;
+  } catch (e) { $("llm-status").textContent = "error: " + e.message; }
+  $("ask").disabled = false;
+};
+
+// --- Suites tab ---
+let pollJob = null;
+document.querySelectorAll("[data-suite]").forEach((b) => b.onclick = async () => {
+  const suite = b.dataset.suite, body = {suite};
+  if (suite === "stt") { body.engines = sttEngines(); const n = +$("suite-limit").value; if (n) body.limit = n; }
+  if (suite === "llm") { const m = $("suite-models").value.split(",").map((x) => x.trim()).filter(Boolean); body.models = m.length ? m : [$("m-llm").value]; }
+  try {
+    const job = await api("/v1/bench/runs", {method: "POST", body: JSON.stringify(body)});
+    $("suite-progress").textContent = `${suite} suite started…`;
+    clearInterval(pollJob);
+    pollJob = setInterval(async () => {
+      const j = await api(`/v1/bench/runs/${job.id}`);
+      $("suite-progress").textContent = j.progress.join("\n") + (j.status === "running" ? "\n…" : "\n" + j.status + (j.error ? ": " + j.error : ""));
+      if (j.status !== "running") { clearInterval(pollJob); $("res-suite").value = suite; await loadRuns(j.run); }
+    }, 1000);
+  } catch (e) { $("suite-progress").textContent = "error: " + e.message; }
+});
+async function loadRuns(pick) {
+  const suite = $("res-suite").value, runs = (await api(`/v1/bench/results/${suite}`)).runs.reverse();
+  $("res-run").innerHTML = runs.map((r) => `<option ${r === pick ? "selected" : ""}>${esc(r)}</option>`).join("");
+  if (runs.length) showRun(); else $("results").innerHTML = '<span class="muted">No run yet.</span>';
+}
+$("res-suite").onchange = () => loadRuns(); $("res-run").onchange = () => showRun();
+function table(head, rows) {
+  return `<table><thead><tr>${head.map((h) => `<th class="${h[1] || ""}">${esc(h[0])}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`;
+}
+async function showRun() {
+  const suite = $("res-suite").value, run = $("res-run").value, r = await api(`/v1/bench/results/${suite}/${run}`);
+  if (suite === "stt") {
+    $("results").innerHTML = table([["Engine"], ["Corpus"], ["Part"], ["Clips", "num"], ["WER", "num"], ["Invented", "num"], ["p50 ms", "num"], ["p90 ms", "num"]],
+      r.summary.map((s) => `<tr><td>${esc(s.engine)}</td><td>${esc(s.corpus)}</td><td>${esc(s.part)}</td><td class="num">${s.clips}</td>
+        <td class="num">${pct(s.wer)}</td><td class="num">${pct(s.invented)}</td><td class="num">${sec(s.ms_p50, 0)}</td><td class="num">${sec(s.ms_p90, 0)}</td></tr>`));
+  } else if (suite === "tts") {
+    $("results").innerHTML = table([["Engine"], ["Voice"], ["Text"], ["First audio", "num"], ["RTF", "num"], ["Audio", "num"], ["WER", "num"], ["Listen"]],
+      r.rows.map((s) => s.error ? `<tr><td>${esc(s.engine)}</td><td colspan="7" class="error">${esc(s.error)}</td></tr>` :
+        `<tr><td>${esc(s.engine)}</td><td>${esc(s.voice)}</td><td>${esc(s.text_id)}</td><td class="num">${sec(s.first_audio_s)} s</td>
+        <td class="num">${sec(s.rtf)}</td><td class="num">${sec(s.audio_s, 1)} s</td><td class="num">${pct(s.wer)}</td>
+        <td><audio controls preload="none" src="/v1/bench/audio/${esc(s.wav)}"></audio></td></tr>`));
+  } else if (suite === "llm") {
+    $("results").innerHTML = r.summary.map((s) => `<div class="mono">${esc(s.model)}: ${s.passed} of ${s.cases} cases pass ·
+      ${s.silent ?? 0} silent · first word p50 ${sec(s.first_token_p50)} s · slowest ${sec(s.first_token_max)} s</div>`).join("") +
+      table([["Model"], ["Case"], ["Persona"], ["First token", "num"], ["Checks"], ["Reply"]],
+        r.rows.map((s) => `<tr><td>${esc(s.model)}</td><td>${esc(s.case)}</td><td>${esc(s.persona || "")}</td><td class="num">${sec(s.first_token_s)}</td>
+          <td>${Object.entries(s.checks || {}).map(([k, v]) => `<span class="${v ? "good" : "bad"}">${esc(k)}</span>`).join(" · ")}${s.error ? ` <span class="bad">${esc(s.error)}</span>` : ""}</td>
+          <td>${esc((s.reply || "").slice(0, 160))}</td></tr>`));
+  } else {
+    const s = r.summary || {};
+    $("results").innerHTML = `<div class="mono">first agent audio p50 ${sec(s.first_audio_p50)} s · p90 ${sec(s.first_audio_p90)} s ·
+      early replies ${s.early_replies} of ${s.unfinished} · noise false turns ${s.noise_false_turns} of ${s.noise_clips} ·
+      backchannel ${s.backchannel_ok ? "ok" : "FAILED"} · barge-in stop ${sec(s.barge_in_stop_s)} s ·
+      turn commit p50 ${sec(s.commit_p50)} s · echo ${s.echo_became_turn == null ? "-" : s.echo_became_turn ? "became a turn" : "ignored"}</div>` +
+      table([["Case"], ["Detail"]], r.rows.map((x) => `<tr><td>${esc(x.case)}</td><td class="mono">${esc(JSON.stringify(Object.fromEntries(Object.entries(x).filter(([k]) => k !== "case"))))}</td></tr>`));
+  }
+}
+
+// --- start ---
 health();
-const sid = new URLSearchParams(location.search).get("s");
-if (sid) loadSession(sid);
+loadClips();
+loadModels().then(() => {
+  const tab = new URLSearchParams(location.search).get("tab");
+  if (["stt", "tts", "llm", "suites"].includes(tab)) openTab(tab);
+});
+clearView(); updateOrb(); orbStart();
 </script>
 </body>
 </html>

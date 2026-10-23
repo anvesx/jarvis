@@ -171,6 +171,72 @@ def test_replace_last_undoes_an_unanswered_turn():
     assert s.engine.tokens == 3000  # the undone read was still paid for
 
 
+def test_a_voice_reply_has_a_token_limit_that_leaves_room_for_hidden_text():
+    from orb_discussion.personas import VOICE_MAX_TOKENS
+
+    agent, s, llm = make([{"claims": 1, "new_option": 1}, {"new_option": 1}], ["Hashing is safer."])
+    asyncio.run(run_turn(s, "We should store passwords in a JSON file.", channel="voice"))
+    assert llm.prompts[0]["options"] == {"temperature": 0.8, "num_predict": VOICE_MAX_TOKENS}
+    # Measured 2026-10-22: gemma4:e2b writes up to 370 hidden tokens before its first word on a line such as "Can you
+    # hear me clearly?". Ollama's limit counts them. A limit of 200 left such a turn with no word at all.
+    assert VOICE_MAX_TOKENS > 2 * 370
+
+
+class HiddenThinkerLLM(FakeLLM):
+    """Like gemma4:e2b on a short line: it writes `hidden` tokens that never reach the text, then its reply (one token
+    for each word). `num_predict` counts the hidden tokens too, as Ollama's limit does."""
+
+    def __init__(self, hidden, reply):
+        super().__init__([])
+        self.hidden, self.reply = hidden, reply
+
+    async def stream(self, messages, options=None):
+        self.prompts.append({"messages": messages, "options": options})
+        budget = (options or {}).get("num_predict", 10 ** 9) - self.hidden
+        for i, word in enumerate(self.reply.split(" ")[:max(budget, 0)]):
+            yield word if i == 0 else " " + word
+
+
+def hidden_thinker_turn(hidden, channel="voice"):
+    llm = HiddenThinkerLLM(hidden, "I can hear you clearly. What do you want to talk about first?")
+    agent = DiscussionAgent(ScriptedReader([{"claims": 1, "new_option": 1}, {"new_option": 1}]), llm, load_source=no_source)
+    s = agent.new_session("Should our assistant store passwords?", "test-hidden")
+    return s, asyncio.run(run_turn(s, "Can you hear me clearly? I don't know you are listening or not.", channel))
+
+
+def test_a_voice_turn_still_speaks_after_300_hidden_tokens():
+    s, events = hidden_thinker_turn(300)
+    reply = next(e for e in events if e.type == "reply").data["text"]
+    assert reply.startswith("I can hear you clearly.") and [m["speaker"] for m in s.messages] == ["human", "ai"]
+
+
+def test_an_empty_reply_is_logged_and_never_added_to_the_chat(monkeypatch, caplog):
+    import logging
+
+    monkeypatch.setattr("orb_discussion.agent.VOICE_MAX_TOKENS", 200)  # the old limit: the hidden text ate all of it
+    with caplog.at_level(logging.WARNING, logger="orb.discussion"):
+        s, events = hidden_thinker_turn(300)
+    assert next(e for e in events if e.type == "reply").data["text"] == ""
+    assert "wrote no words" in caplog.text and [m["speaker"] for m in s.messages] == ["human"]
+    assert not any(e.type == "check" for e in events)  # nothing to check, and no empty message in the chat
+
+
+def test_a_long_voice_reply_is_cut_at_the_character_limit_but_a_web_reply_is_not():
+    from orb_discussion.personas import VOICE_MAX_CHARS
+
+    long_reply = " ".join(["word"] * 600)  # 2,999 characters
+    script = [{"claims": 1, "new_option": 1}, {"new_option": 1}]
+    for channel, cut in (("voice", True), ("web", False)):
+        llm = FakeLLM([long_reply])
+        s = DiscussionAgent(ScriptedReader(script), llm, load_source=no_source).new_session("Passwords?", "test-long")
+        events = asyncio.run(run_turn(s, "We should store passwords in a JSON file.", channel))
+        reply = next(e for e in events if e.type == "reply").data["text"]
+        if cut:
+            assert VOICE_MAX_CHARS <= len(reply) < VOICE_MAX_CHARS + 20 and s.messages[-1]["interrupted"] is True
+        else:
+            assert reply == long_reply and not s.messages[-1].get("interrupted")
+
+
 def test_replace_last_ignores_a_new_sentence():
     script = [{"claims": 1, "new_option": 1}, {"new_option": 1}, {"claims": 1}, {}]
     s = DiscussionAgent(ScriptedReader(script), FakeLLM(["One.", "Two."]), load_source=no_source).new_session("P?", "test-4")

@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 from orb_speech import audio
-from orb_speech.turn import last_window
 
 
 def test_pcm_round_trip_is_close():
@@ -26,15 +25,6 @@ def test_resample_lengths():
         audio.resample(x, 0, 16000)
 
 
-def test_turn_window_pads_at_the_start_and_keeps_the_end():
-    short = np.ones(16000, dtype=np.float32)
-    w = last_window(short)
-    assert len(w) == 8 * 16000 and w[0] == 0.0 and w[-1] == 1.0 and w.sum() == 16000
-    long = np.arange(10 * 16000, dtype=np.float32)
-    w = last_window(long)
-    assert len(w) == 8 * 16000 and w[-1] == long[-1] and w[0] == long[2 * 16000]
-
-
 def test_stt_clean_removes_stray_quotes_only():
     from orb_speech.stt import clean
 
@@ -42,3 +32,41 @@ def test_stt_clean_removes_stray_quotes_only():
     assert clean('"What would you pick for the database?"') == "What would you pick for the database?"
     assert clean("“Quoted”") == "Quoted"
     assert clean("") == "" and clean(None) == ""
+
+
+def test_stt_clean_removes_fillers_only():
+    from orb_speech.stt import clean
+
+    assert clean("Uh it's called uh Petticoat Market Lane.") == "It's called Petticoat Market Lane."
+    assert clean("We were, uh, late") == "We were late"
+    assert clean("sweet, uh something every meal uh.") == "sweet, something every meal."
+    assert clean("Um.") == "" and clean("Uh?") == ""
+    assert clean("UM, okay") == "Okay"
+    assert clean("The umbrella and the hum stay. Uhura too.") == "The umbrella and the hum stay. Uhura too."
+
+
+def test_parakeet_keep_warm_runs_only_inside_the_window(monkeypatch):
+    import threading
+    import time
+
+    from orb_speech import stt
+
+    monkeypatch.setattr(stt, "KEEP_WARM_IDLE", 0.05)
+    monkeypatch.setattr(stt, "KEEP_WARM_WINDOW", 0.6)
+    m = stt.ParakeetSTT.__new__(stt.ParakeetSTT)  # no model: _run is a stub
+    runs = []
+    m._run = lambda x: runs.append(len(x)) or "hello"
+    m.language, m._lock, m._stop = None, threading.Lock(), threading.Event()
+    m._silence = np.zeros(3200, dtype=np.float32)
+    m._last_call = m._last_real = time.monotonic()
+    threading.Thread(target=m._keep_warm, daemon=True).start()
+    time.sleep(0.5)
+    assert runs and set(runs) == {3200}  # silent 0.2 s calls inside the window
+    time.sleep(0.6)
+    stopped = len(runs)
+    time.sleep(0.6)
+    assert len(runs) == stopped  # no calls after the window
+    assert m.transcribe(np.zeros(16000, dtype=np.float32))["text"] == "hello"  # a real call opens it again
+    time.sleep(0.5)
+    m.close()
+    assert len(runs) > stopped + 1

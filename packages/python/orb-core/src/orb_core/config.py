@@ -52,6 +52,23 @@ def load_env_files(*paths: str | os.PathLike | None) -> list[str]:
     return loaded
 
 
+def load_env_prefixes(prefixes: tuple[str, ...], root: str | os.PathLike | None = None) -> list[str]:
+    """Copy only the variables of the repo .env whose names start with one of `prefixes`, when they are not set.
+
+    Other secrets in the file (a Cloudflare token, for example) never enter the process.
+    Returns the names that were set, never the values.
+    """
+    path = (Path(root) if root else repo_root()) / ".env"
+    if not path.is_file():
+        return []
+    loaded = []
+    for key, value in parse_env_text(path.read_text()).items():
+        if key.startswith(prefixes) and value and key not in os.environ:
+            os.environ[key] = value
+            loaded.append(key)
+    return loaded
+
+
 def bootstrap(root: str | os.PathLike | None = None) -> list[str]:
     """Load the repo .env, then the file that ORB_SECRETS_FILE or JEV_ENV_FILE names."""
     root = Path(root) if root else repo_root()
@@ -73,12 +90,15 @@ def describe(names: list[str]) -> dict[str, str]:
     return {n: ("set" if os.environ.get(n, "").strip() else "missing") for n in names}
 
 
+ROOT_MARKER = Path("packages/python/orb-core")  # a folder that only the orb repo root has
+
+
 def repo_root() -> Path:
-    """The orb repo root: ORB_ROOT, or the nearest parent folder that has go.work."""
+    """The orb repo root: ORB_ROOT, or the nearest parent folder that has packages/python/orb-core."""
     if os.environ.get("ORB_ROOT"):
         return Path(os.environ["ORB_ROOT"]).expanduser()
     here = Path.cwd().resolve()
     for p in (here, *here.parents):
-        if (p / "go.work").is_file():
+        if (p / ROOT_MARKER).is_dir():
             return p
     return here

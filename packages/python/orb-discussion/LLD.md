@@ -1,6 +1,6 @@
 # LLD: orb-discussion (the discussion agent)
 
-Code: `src/orb_discussion/` · Tests: `tests/` (33) · Status: built · Last update: 2026-10-21
+Code: `src/orb_discussion/` · Tests: `tests/` (39) · Status: built · Last update: 2026-10-22
 
 **The discussion agent is an AI partner that does not just agree.** Jev reads each message with yes/no
 questions, fixed debt rules turn the answers into debts, the most urgent due debt picks one of six personas,
@@ -35,7 +35,10 @@ One turn of `DiscussionSession.turn(text, channel, replace_last)`:
 5. Stream the reply from the LLM: system prompt, the chat, then the note, which ends with "Now reply to the
    person. Write only the words that you say to them." Every piece goes through `ReplyFilter`: a line that copies
    the note ("Persona: ...", "Why: ...") is dropped before anyone reads or hears it, and recorded in
-   `turn["dropped_lines"]`. Emit `token` events.
+   `turn["dropped_lines"]`. So is a first line that is only a chat role ("assistant", "model", "user", "system").
+   A voice reply has two limits (`VOICE_MAX_TOKENS` 1,024, Ollama's `num_predict`, which counts hidden tokens too, and
+   `VOICE_MAX_CHARS` 700 visible characters: the stream stops and the reply is marked cut off). A reply with no
+   visible word is logged as a warning and is not added to the chat. Emit `token` events.
 6. Record the reply (marked `interrupted` when the stream was cut). Start the read of the reply in the
    background: one Jev request, the rules apply it, and the check says whether the reply paid the need.
 7. Emit `reply`, `check` and `state`.
@@ -73,6 +76,8 @@ reason?" after an Examiner need.
 | Persona of a need | Interaction → Teacher, Divergence → Rival, Challenge → Examiner, Reflection → Judge, Progression → Navigator, Resolution → Chair | chosen |
 | Persona temperature | Rival 0.8 · Teacher, Navigator 0.6 · Examiner 0.5 · Judge, Chair 0.4 | chosen |
 | Reply length | per persona (2 to 5 sentences); voice: 1 to 3 short sentences | chosen: each spoken sentence costs listening time |
+| Voice token limit | 1,024 tokens | measured 2026-10-22: gemma4:e2b writes 0 to 370 hidden tokens before its first word on short or confusing lines ("Can you hear me clearly?"), also with `think` false. A limit of 200 left 2 of 3 turns of a live call with no word, so the agent stayed silent (decision 0007) |
+| Voice character limit | 700 characters (about 45 s of speech) | chosen: 3 times a reply of 3 short sentences. The thinking build of qwen3:4b wrote 3,000 to 10,000 characters per voice reply |
 | Jev view | ≤ 12 earlier messages · 600 characters each · new message ≤ 1,500 characters | chosen: bounds the request size |
 | Cost of a turn | about 1,600 + 1,200 input tokens × $0.042 per million = $0.00012 | measured 2026-10-21 (median tokens) |
 | `continues(old, new)` | difflib ratio of the old words against the first len(old) words of `new` ≥ 0.6 | chosen 2026-10-22: the voice channel transcribes the whole turn again, so the first words can differ a little; a resumed turn has the same words |
@@ -107,6 +112,12 @@ reason?" after an Examiner need.
 | Labels in capitals, with blank lines | dropped; the reply starts at its first word | `test_filter_drops_labels_with_blank_lines_and_odd_case` |
 | "Why do you...", "Note that...", "Personally...", "Stage one..." | kept unchanged | `test_filter_keeps_normal_replies_and_words_that_look_like_labels` |
 | A held start | "Why" is held, "Why not" is released at once | `test_filter_holds_only_a_short_start` |
+| A first line "assistant" (llama3.2:3b, 2026-10-22) or "Model:" | dropped | `test_filter_drops_a_first_line_that_is_only_a_chat_role` |
+| "User passwords…", "Assistants can…", a later "assistant" line | kept unchanged | `test_filter_keeps_replies_that_start_with_a_role_word` |
+| A voice turn | the LLM gets `num_predict` 1,024, more than twice the worst hidden text measured | `test_a_voice_reply_has_a_token_limit_that_leaves_room_for_hidden_text` |
+| 300 hidden tokens, then the reply | the voice turn speaks | `test_a_voice_turn_still_speaks_after_300_hidden_tokens` |
+| The old limit (200) with 300 hidden tokens | an empty reply, a warning in the log, no message in the chat, no check | `test_an_empty_reply_is_logged_and_never_added_to_the_chat` |
+| A reply of 3,000 characters | cut near 700 and marked cut off on the voice channel; whole on the web channel | `test_a_long_voice_reply_is_cut_at_the_character_limit_but_a_web_reply_is_not` |
 | Markdown and "[" | removed; the stream stops at "[" | `test_filter_stops_at_a_bracket_and_strips_markdown` |
 | A leaked reply in a full turn | the person hears only the real reply; the chat history is clean | `test_agent.py::test_a_copied_note_never_reaches_the_person` |
 
@@ -130,9 +141,12 @@ Measured on an Apple M5, 2026-10-21, Gemma `gemma4:e2b` in Ollama, 9 turns:
 | Gemma full reply | 0.95 s | 1.29 s |
 | Jev reads the reply (5 questions, 1,183 tokens) | 0.35 s | 0.51 s |
 
-The Jev read of the person is on the critical path: the persona depends on it. **Next:** start the read on
-the final transcript, before the voice turn commits, and apply it only when the turn commits (saves up to the
-200 ms commit wait plus the overlap with the end-of-turn decision).
+The Jev read of the person is on the critical path: the persona depends on it. The voice worker now starts the
+turn at a preflight transcript, 0.2 s after the person stops, so the read overlaps the end-of-turn decision
+(decision 0006). The turn's `timing` has `wait` (the time before the read starts: the read of the last reply, the
+source), `read_human`, `llm_first_token` and `llm_total`. Measured in the turn suite (2026-10-22): `wait` 0 s in 13
+of 14 turns, `read_human` 0.34 to 0.88 s, `llm_first_token` 0.23 to 0.54 s. **Next:** a decision that does not wait
+for the read would save about 0.5 s; it changes how the persona is chosen.
 
 ## 7. Edge cases
 | Case | What happens | Why |

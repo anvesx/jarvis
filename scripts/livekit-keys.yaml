@@ -1,0 +1,11 @@
+# The LiveKit server of `scripts/dev.sh` when LIVEKIT_API_KEY and LIVEKIT_API_SECRET are set (decision 0009).
+# It has real keys: dev.sh passes them in the environment variable LIVEKIT_KEYS, so no secret is in this file.
+port: 7880
+bind_addresses:
+  - "127.0.0.1"      # the signal port: only this computer connects (the agent service forwards /rtc for other devices)
+rtc:
+  tcp_port: 7881     # audio over TCP, when a device cannot use UDP
+  udp_port: 7882     # one UDP port for all audio
+  use_external_ip: false   # the devices must reach this computer by its own addresses (same network, or IPv6)
+logging:
+  level: info
