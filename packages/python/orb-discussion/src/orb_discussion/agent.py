@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import logging
 import re
 import time
 from difflib import SequenceMatcher
@@ -28,8 +29,10 @@ from orb_core.jev import cost_usd
 from orb_core.ollama import OllamaError
 from orb_discussion import prompt
 from orb_discussion.engine import DebtEngine
-from orb_discussion.personas import PERSONAS
+from orb_discussion.personas import PERSONAS, VOICE_MAX_CHARS, VOICE_MAX_TOKENS
 from orb_discussion.rules import mid
+
+log = logging.getLogger("orb.discussion")
 
 
 def summarize(entry: dict) -> dict:
@@ -124,10 +127,12 @@ class DiscussionSession:
     # --- one turn ---
     async def turn(self, text: str, channel: str = "web", replace_last: bool = False):
         text = check_text(text)
+        t_enter = time.perf_counter()
         await self.settle()
         async with self._lock:
             await self.prepare()
             replaced = self._undo_last(text) if replace_last else None
+            wait = time.perf_counter() - t_enter  # the read of the last reply, a turn before this one, the source
             read = asyncio.create_task(self._read_person(text, channel, replaced))
             self._pending = read
             try:
@@ -138,28 +143,36 @@ class DiscussionSession:
                 yield Event("error", f"The reader failed on your message, so nothing changed. "
                                      f"Send it again. ({type(e).__name__}: {e})")
                 return
+            turn["timing"]["wait"] = round(wait, 3)
             yield Event("read", turn["read"])
             yield Event("decision", turn["decision"])
 
             persona = PERSONAS[turn["need"]["persona"]]
             msgs = prompt.messages(self.system_prompt(), self.messages, turn["decision"]["note"])
-            parts, completed, error = [], False, None
+            parts, completed, error, cut = [], False, None, False
             cleaner = prompt.ReplyFilter()  # no copied note line may reach the person, the voice or the chat history
-            t0, first = time.perf_counter(), None
+            t0, first, visible = time.perf_counter(), None, 0
             try:
-                async for piece in self.agent.llm.stream(msgs, {"temperature": persona.temperature}):
+                options = {"temperature": persona.temperature}
+                if channel == "voice":
+                    options["num_predict"] = VOICE_MAX_TOKENS
+                async for piece in self.agent.llm.stream(msgs, options):
                     piece = cleaner.feed(piece)
                     if piece:
                         first = first if first is not None else time.perf_counter() - t0
                         parts.append(piece)
+                        visible += len(piece)
                         yield Event("token", piece)
+                        if channel == "voice" and visible >= VOICE_MAX_CHARS:
+                            cut = True  # a model that talks too long: the person hears the start of its reply
+                            break
                     if cleaner.stopped:
                         break
-                tail = cleaner.end()
+                tail = "" if cut else cleaner.end()
                 if tail:
                     parts.append(tail)
                     yield Event("token", tail)
-                completed = True
+                completed = not cut
             except OllamaError as e:
                 error = str(e)
             finally:
@@ -176,6 +189,8 @@ class DiscussionSession:
             if error:
                 yield Event("error", f"The LLM failed: {error}")
                 return
+            if not reply:  # the person hears nothing: say so in the log, and the channel shows it from the empty text
+                log.warning("The LLM wrote no words for a %s turn (%.1f s).", channel, time.perf_counter() - t0)
             yield Event("reply", {"text": reply, "timing": turn["timing"]})
             if turn.get("ai") is not None:
                 yield Event("check", await asyncio.shield(self._pending))

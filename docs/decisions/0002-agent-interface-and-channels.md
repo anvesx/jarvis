@@ -1,6 +1,6 @@
 # 0002 · One agent interface, many channels; the brain in Python, voice in Go
 
-Date: 2026-10-21 · Status: accepted
+Date: 2026-10-21 · Status: accepted · The voice part is replaced: the worker is Python on LiveKit Agents (0006)
 
 ## Decision
 **An agent is a brain behind one interface. A channel only moves turns in and events out.**

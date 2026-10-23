@@ -29,3 +29,13 @@ PERSONAS = {
 }
 
 VOICE_LENGTH = "1 to 3 short sentences"  # spoken replies must be short: each sentence costs listening time
+# Two stops for a model that does not keep to the length rule (decision 0007).
+# VOICE_MAX_TOKENS is Ollama's hard stop. It counts every token that the model writes, the hidden ones too. Measured
+# 2026-10-22: gemma4:e2b writes 0 to 370 hidden tokens before its first word on a short or confusing line such as "Can
+# you hear me clearly?", also with think set to false. A stop at 200 tokens cut such a turn before the first word, and
+# the agent stayed silent. So the stop is 1024 tokens, about 3 times the worst hidden text that was measured.
+VOICE_MAX_TOKENS = 1024
+# VOICE_MAX_CHARS stops a model that talks too long: the person hears the start of the reply. 700 characters is about
+# 45 seconds of speech, and 3 times a reply of 3 short sentences. (The thinking build of qwen3:4b wrote 3,000 to
+# 10,000 characters per voice reply.)
+VOICE_MAX_CHARS = 700

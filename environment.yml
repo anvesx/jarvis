@@ -10,8 +10,10 @@ dependencies:
   - pip:
       - -e packages/python/orb-core
       - -e packages/python/orb-discussion
-      - -e packages/python/orb-speech
+      - -e packages/python/orb-speech[speech-lm]
+      - -e packages/python/orb-bench
       - -e apps/agent
+      - -e apps/voice-agent
       - pytest
       - livekit        # the end-to-end voice test joins rooms with it
       - livekit-api

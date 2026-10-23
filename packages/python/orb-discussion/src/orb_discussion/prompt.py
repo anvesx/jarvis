@@ -123,13 +123,21 @@ def clean_piece(piece: str) -> tuple[str, bool]:
 # voice turn: 4 of 20 replies started with "Persona: ...", "Your job now: ...", "Why: ..."). The filter drops such lines.
 NOTE_LABELS = ("persona:", "your job:", "your job now:", "job:", "why:", "stage:", "stage of the discussion:",
                "length:", "also open:", "also:", "note:", "your task:", "task:", "goal:", "this note")
+# A small LLM sometimes writes its chat role on the first line (measured 2026-10-22: llama3.2:3b wrote "assistant").
+ROLE_LINES = ("assistant", "model", "user", "system")
 
 
-def _label_state(line: str) -> str:
-    """"label" when the line starts with a note label, "maybe" while it could still become one, else "text"."""
+def _label_state(line: str, first: bool = False) -> str:
+    """"label" when the line starts with a note label, "maybe" while it could still become one, else "text".
+    On the first line, also "role" when the line is only a chat role (it is dropped at its end)."""
     s = " ".join(line.split()).lower()
     if not s:
         return "maybe"
+    if first:
+        if s.removesuffix(":") in ROLE_LINES:
+            return "role"
+        if any(role.startswith(s) for role in ROLE_LINES):
+            return "maybe"
     for label in NOTE_LABELS:
         if s.startswith(label):
             return "label"
@@ -173,7 +181,7 @@ class ReplyFilter:
                 if self.passing:
                     if self.started:
                         out.append("\n")
-                elif _label_state(self.line) == "label":
+                elif _label_state(self.line, not self.started) in ("label", "role"):
                     self.dropped.append(self.line.strip())
                 elif self.line.strip():
                     out.append(self._emit(self.line) + "\n")
@@ -182,7 +190,7 @@ class ReplyFilter:
                 out.append(self._emit(ch))
             else:
                 self.line += ch
-                if _label_state(self.line) == "text":
+                if _label_state(self.line, not self.started) == "text":
                     out.append(self._emit(self.line))
                     self.line, self.passing = "", True
         return "".join(out)
@@ -192,7 +200,7 @@ class ReplyFilter:
         line, self.line = self.line, ""
         if not line or self.passing:
             return ""
-        if _label_state(line) == "label":
+        if _label_state(line, not self.started) in ("label", "role"):
             self.dropped.append(line.strip())
             return ""
         return self._emit(line)

@@ -1,6 +1,6 @@
 # 0003 · Local speech models: Whistle, Kokoro, Smart Turn
 
-Date: 2026-10-21 · Status: accepted
+Date: 2026-10-21 · Status: accepted in part · Speech to text: 0005 and 0007. End of turn and VAD: LiveKit's turn detector and Silero plugin replace Smart Turn and the Go port (0006)
 
 ## Decision
 | Job | Model | Size | License | Measured on an Apple M5 |

@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import AsyncIterator
 
 import httpx
+
+log = logging.getLogger("orb.ollama")
 
 DEFAULT_URL = "http://127.0.0.1:11434"
 DEFAULT_MODEL = "gemma4:e2b"
@@ -43,6 +46,11 @@ class Ollama:
                     piece = msg.get("message", {}).get("content", "")
                     if piece:
                         yield piece
+                    if msg.get("done"):  # Ollama's own timings: counts and seconds only, never words
+                        log.info("ollama %s: load %.2f s, prompt %s tokens in %.2f s, reply %s tokens in %.2f s",
+                                 self.model, msg.get("load_duration", 0) / 1e9, msg.get("prompt_eval_count"),
+                                 msg.get("prompt_eval_duration", 0) / 1e9, msg.get("eval_count"),
+                                 msg.get("eval_duration", 0) / 1e9)
 
     async def warm(self, messages: list[dict]) -> None:
         """Read the prompt once, so that the first real reply does not wait for it. Errors are ignored."""

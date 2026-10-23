@@ -3,10 +3,9 @@
 *.env
 !.env.example
 
-# runtime data (sessions, logs, built binaries)
+# runtime data (sessions, logs)
 data/sessions/
 data/logs/
-data/bin/
 # ORB_DEBUG_AUDIO_DIR files hold real voices: never commit them
 data/debug_audio/
 
@@ -29,3 +28,5 @@ data/chats/*
 docs/explainers/
 packages/go/lk-go-agent-sdk/_learning/
 packages/go/lk-go-agent-sdk/knowledge.txt
+# the bench's test audio (EdAcc and LibriSpeech are CC-BY research sets) and its results
+data/testbench/

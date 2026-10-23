@@ -90,6 +90,21 @@ def test_filter_keeps_normal_replies_and_words_that_look_like_labels():
         assert out == text and dropped == [], text
 
 
+def test_filter_drops_a_first_line_that_is_only_a_chat_role():
+    # the real leak of 2026-10-22 (llama3.2:3b)
+    out, dropped = stream(["assis", "tant\n", "That is quick to set up, but is it safe?"])
+    assert out == "That is quick to set up, but is it safe?" and dropped == ["assistant"]
+    out, dropped = stream(["Model:\n\nYes."])
+    assert out == "Yes." and dropped == ["Model:"]
+
+
+def test_filter_keeps_replies_that_start_with_a_role_word():
+    for text in ["User passwords must be hashed.", "Assistants can log in for them.", "System design comes first.",
+                 "Models differ.\nassistant"]:
+        out, dropped = stream([text[i:i + 3] for i in range(0, len(text), 3)])
+        assert out == text and dropped == [], text
+
+
 def test_filter_holds_only_a_short_start():
     f = prompt.ReplyFilter()
     assert f.feed("Why") == ""            # could still be "Why:"

@@ -43,9 +43,24 @@ def test_is_secret():
     assert not config.is_secret("LIVEKIT_URL")
 
 
-def test_repo_root_finds_go_work(tmp_path, monkeypatch):
-    (tmp_path / "go.work").write_text("go 1.26\n")
+def test_repo_root_finds_the_orb_core_folder(tmp_path, monkeypatch):
+    (tmp_path / "packages" / "python" / "orb-core").mkdir(parents=True)
     (tmp_path / "a" / "b").mkdir(parents=True)
     monkeypatch.delenv("ORB_ROOT", raising=False)
     monkeypatch.chdir(tmp_path / "a" / "b")
     assert config.repo_root() == tmp_path.resolve()
+    monkeypatch.chdir(tmp_path / "packages" / "python" / "orb-core")  # from inside the package too
+    assert config.repo_root() == tmp_path.resolve()
+
+
+def test_load_env_prefixes_copies_only_the_chosen_keys_and_never_over_a_set_value(tmp_path, monkeypatch):
+    (tmp_path / ".env").write_text("CARTESIA_API_KEY=sk_car_test\nCF_WORKERS_TOKEN=other-secret\nCARTESIA_VERSION=\n"
+                                   "CARTESIA_TIMEOUT=5\n")
+    for name in ("CARTESIA_API_KEY", "CF_WORKERS_TOKEN", "CARTESIA_VERSION", "CARTESIA_TIMEOUT"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("CARTESIA_TIMEOUT", "9")  # already set: stays
+    assert config.load_env_prefixes(("CARTESIA_",), tmp_path) == ["CARTESIA_API_KEY"]  # an empty value is skipped
+    import os
+    assert os.environ["CARTESIA_API_KEY"] == "sk_car_test" and "CF_WORKERS_TOKEN" not in os.environ
+    assert os.environ["CARTESIA_TIMEOUT"] == "9"
+    assert config.load_env_prefixes(("CARTESIA_",), tmp_path / "missing") == []

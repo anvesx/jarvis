@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "orb-speech"
 version = "0.1.0"
-description = "Local speech for orb: Whistle speech-to-text, Kokoro text-to-speech and Smart Turn end-of-turn detection, behind one small HTTP service."
+description = "Local speech for orb: Whistle or Parakeet speech to text, and Kokoro, maya1 or indic-speak text to speech, behind one small HTTP service."
 requires-python = ">=3.12"
 dependencies = [
   "numpy>=2",
@@ -13,11 +13,19 @@ dependencies = [
   "onnxruntime>=1.20",
   "cactus-needle==3.2.8",
   "kokoro-onnx>=0.6",
-  "transformers>=4.40",
+  "transformers>=5.19",  # ParakeetForTDT
+  "torch>=2.14",
+  "librosa>=1.0",        # the Parakeet feature extractor needs its mel filters
   "huggingface_hub>=0.30",
+  "httpx>=0.27",         # the Cartesia engine
+  "orb-core>=0.1",       # the repo .env loader
   "fastapi>=0.110",
   "uvicorn>=0.30",
 ]
+
+[project.optional-dependencies]
+# maya1 and indic-speak (tts_lm.py): Apple silicon only. Kokoro needs none of these.
+speech-lm = ["mlx==0.32.4", "mlx-lm==0.32.2", "snac==1.2.1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
