@@ -11,7 +11,7 @@ lines, write symbols of a spoken command ("dash b" -> "-b"), drop false starts a
 - dropped a negation ("not", "never", "can't"): one word that turns the meaning around;
 - dropped the corrected value of a self-correction: the first word after "no wait", "I mean", "make that" must stay
   ("Tuesday, no wait, Wednesday" -> "Tuesday" keeps the wrong day);
-- took longer than 400 ms.
+- took longer than 800 ms (the caption only waits; the agent already has the text).
 
 The polish runs after the final transcript, never on the turn path: the agent already has the deterministic text.
 The log has only the reason and the time, never words.
@@ -31,7 +31,7 @@ STRENGTHS = ("verbatim", "light", "medium")
 MAX_CHANGED = {"light": 0.15, "medium": 0.35}  # (replaced + inserted words) / input words
 MAX_DROPPED = 0.5    # a self-correction drops its first try: "Priya, sorry, I mean Sanjay" drops 4 of 9 words
 MIN_WORDS = 4        # 3 words or fewer stay as they are
-LIMIT_MS = 400
+LIMIT_MS = 800       # 400 rejected every live polish (403–424 ms) with the agent LLM loaded; decision 0013
 MAX_CONTEXT = 500    # chars of the agent's last reply
 
 LIST_MARKER = re.compile(r"(?m)^\s*(?:\d{1,2}[.)]|[-*•])\s+")

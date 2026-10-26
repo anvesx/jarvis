@@ -19,7 +19,7 @@ starts. Wispr Flow does these with an LLM after the transcript. LLMs used to cor
   - replaces or inserts more than 35 % (medium) or 15 % (light) of the input's words, or drops more than half;
   - drops a negation (not, never, can't);
   - drops the corrected value of a self-correction (the first word after "no wait", "I mean", "make that");
-  - is empty, or arrives after 400 ms.
+  - is empty, or arrives after 800 ms (400 ms until the live test below).
 - 3 words or fewer are never sent.
 
 ## Measured (Apple M4, 16 GB, 2026-10-26)
@@ -57,3 +57,7 @@ All 480 `stt/dictation` rows (6 voices, clean and 10 dB noise):
 - One more resident model: about 1 GB more memory while Ollama keeps it (keep_alive 30 min).
 - Captions can change twice: Whistle's interim words, Parakeet's final, then the polish (about 0.2 s later).
 - `scripts/check_stack.sh` checks that the polish model is installed.
+- **Time limit raised to 800 ms (2026-10-26, owner's live test).** With gemma4:e2b, Parakeet and the polish model
+  loaded on the 16 GB Mac (10 GB of swap), every live polish took 403–424 ms and was kept as "slow". The polish is
+  off the turn path, so a longer limit delays only the caption, never the agent's reply. The bench target (p95 ≤
+  400 ms with nothing else loaded) is unchanged.

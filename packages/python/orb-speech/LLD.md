@@ -52,7 +52,7 @@ for the old numbers.
   `vocab.correct()` when there are terms → `written()` unless `format=raw` (this is `text`). Both texts and the ms
   of each stage go in the answer.
 - **Polish** (`polish.py`, decision 0013): skip 3 words or fewer and `verbatim` → Ollama `/api/chat` with
-  `ORB_POLISH_MODEL` (`qwen2.5:1.5b`), temperature 0, no thinking, a 400 ms timeout, the strength's instruction, 4
+  `ORB_POLISH_MODEL` (`qwen2.5:1.5b`), temperature 0, no thinking, an 800 ms timeout, the strength's instruction, 4
   examples and the agent's last reply as context → `guard()`: word tokens of input and output (list markers dropped);
   reject a content word that is not in the input, the vocabulary, or a join of 2–3 input words; (replaced + inserted)
   > 35 % (medium) or 15 % (light) of the input's words; dropped > 50 %; fewer negations; a lost corrected value (the

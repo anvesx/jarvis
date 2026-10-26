@@ -138,7 +138,7 @@ used because the body is PCM. Limits: at most 200 terms and 4 KB, checked before
   2. Reject the polished text if any of these hold:
      - it has a content word that is in neither the input nor the vocabulary;
      - word-level divergence > 0.35 (medium) or > 0.15 (light);
-     - the time is over 400 ms.
+     - the time is over 800 ms (400 ms at first; raised after the live test, decision 0013).
 
   A rejection keeps the deterministic text and logs the reason (no words), like Wispr's `format_skip_reason`.
 - **Skipped** for 3 words or fewer, and for `editing_strength=verbatim`.
