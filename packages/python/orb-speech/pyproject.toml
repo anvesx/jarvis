@@ -24,8 +24,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# maya1 and indic-speak (tts_lm.py): Apple silicon only. Kokoro needs none of these.
-speech-lm = ["mlx==0.32.4", "mlx-lm==0.32.2", "snac==1.2.1"]
+# maya1 and indic-speak (tts_lm.py) and Qwen3-ASR (stt.py, decision 0014): Apple silicon only. Kokoro needs none.
+speech-lm = ["mlx==0.32.4", "mlx-lm==0.32.2", "snac==1.2.1", "mlx-qwen3-asr==0.4.4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

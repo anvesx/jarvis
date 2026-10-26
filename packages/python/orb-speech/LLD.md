@@ -16,7 +16,7 @@ No audio and no text leaves the machine (except with the cloud engine `cartesia`
 ## 1. Input
 | Endpoint | Body | Limits | Answer |
 |---|---|---|---|
-| `POST /v1/stt?sample_rate=16000[&language=en][&engine=][&format=written\|raw][&vocab=on\|off]`, header `X-Orb-Vocabulary: term, term, …` | PCM16 LE mono | ≤ 60 s; rate 8, 16, 24 or 48 kHz; a language of the engine (Whistle: en de fr es it nl pl; Parakeet: 25 European languages; Cartesia: any ISO-639 code, about 100); `format` is `written` or `raw`, at most 16 characters, and defaults to `ORB_STT_FORMAT`; `vocab` is `on` (default) or `off`; the header has at most 8,192 bytes and, after the split at commas, at most 200 terms of 1 to 64 characters and 4,096 bytes, with no control character | `{"text", "raw", "stages", "language", "engine", "ms", "audio_ms"}`. `text` is the formatted text. `raw` is the engine's text after `clean()`. `stages` maps `asr` (the engine's ms, with `clean()`) `vocab` (ms of the vocabulary pass, only when there are terms) and `written` (ms of the formatter, only with `format=written`) to milliseconds. 400 for a bad `format`, `vocab`, vocabulary header, `sample_rate` or `language`; 502 when the engine's own service fails; 503 when the engine cannot load |
+| `POST /v1/stt?sample_rate=16000[&language=en][&engine=][&format=written\|raw][&vocab=on\|off]`, header `X-Orb-Vocabulary: term, term, …` | PCM16 LE mono | ≤ 60 s; rate 8, 16, 24 or 48 kHz; a language of the engine (Whistle: en de fr es it nl pl; Parakeet: 25 European languages; Qwen3-ASR: `en` or `hi`, only checked, the model finds the language; Cartesia: any ISO-639 code, about 100); `format` is `written` or `raw`, at most 16 characters, and defaults to `ORB_STT_FORMAT`; `vocab` is `on` (default) or `off`; the header has at most 8,192 bytes and, after the split at commas, at most 200 terms of 1 to 64 characters and 4,096 bytes, with no control character | `{"text", "raw", "stages", "language", "engine", "ms", "audio_ms"}`. `text` is the formatted text. `raw` is the engine's text after `clean()`. `stages` maps `asr` (the engine's ms, with `clean()`) `vocab` (ms of the vocabulary pass, only when there are terms) and `written` (ms of the formatter, only with `format=written`) to milliseconds. 400 for a bad `format`, `vocab`, vocabulary header, `sample_rate` or `language`; 502 when the engine's own service fails; 503 when the engine cannot load |
 | `POST /v1/polish`, header `X-Orb-Vocabulary` as for `/v1/stt` | `{"text", "context"?, "strength"?}` | text 1 to 4,000 characters, context ≤ 4,000 (the last 500 are used), strength `verbatim`, `light` or `medium` (default `ORB_POLISH_STRENGTH`) | `{"text", "applied", "reason", "ms", "model"}`: the polished text, or the input with the reason the guard kept it (`short`, `skipped`, `new word`, `changed`, `dropped`, `negation`, `lost correction`, `slow`, `empty`, `failed`). 400 for a bad strength or vocabulary header; 503 without a polish model |
 | `POST /v1/tts` | `{"text", "engine"?, "voice"?, "speed"?, "style"?, "lang"?}` | text 1 to 2,000 characters; engine ≤ 32, voice ≤ 400, style ≤ 64, lang ≤ 16 characters; then the engine's own checks (below) | a stream of PCM16 mono; headers `X-Sample-Rate` (24000), `X-Engine` |
 | `GET /v1/engines` | none | | per kind: the engines, the default, the loaded ones, `cloud` (engines that send the audio to another company) and `unavailable` (engine → the reason, for example a missing key); per TTS engine: `voices`, `styles`, `langs` (known without a load) |
@@ -41,7 +41,7 @@ for the old numbers.
 
 ## 2. Algorithm
 - **Engines** (`engines.py`): a `Registry` per kind maps a name to a factory. `get(name)` builds the engine on first
-  use, under a lock. A heavy engine (Parakeet; maya1 and indic-speak) counts against a limit of one per registry:
+  use, under a lock. A heavy engine (Parakeet and Qwen3-ASR; maya1 and indic-speak) counts against a limit of one per registry:
   loading another heavy engine first calls `close()` on the oldest one. A load error gives 503 with the reason.
 - **One GPU user at a time** (`gpu.py`): PyTorch has one MPS command stream per process, and two threads must not use
   it at once. Every torch call on MPS (Parakeet, the SNAC and Vocos decoders) takes one reentrant lock. MLX has
@@ -64,6 +64,10 @@ for the old numbers.
   (`use effect` → `useEffect`, `Red's` → `Redis`, `docs.devslabs.ai` → `docs.devxlabs.ai`). Text in quotes or
   backticks, emails, URLs, `#N`, money and times are not touched. The function is pure and idempotent.
   - **Whistle:** cactus-needle, on the CPU, with the language as an input.
+  - **Qwen3-ASR** (decision 0014): `mlx-qwen3-asr` with `mlx-community/Qwen3-ASR-1.7B-bf16` (4.1 GB, pinned revision,
+    every file checked), on the GPU through MLX, without the torch lock. No language is passed, so Hinglish stays
+    mixed; the vocabulary goes in as the context prompt. One warm-up call at load. Fetched by
+    `python -m orb_speech.models --all`.
   - **Parakeet:** the feature extractor (128 log-mel bins) → `ParakeetForTDT.generate` on MPS in float32. At load,
     0.2 s and 1 s of silence compile the GPU kernels. A keep-warm thread transcribes 0.2 s of silence after 1 s
     without a call, within 120 s of the last real call.
@@ -164,6 +168,7 @@ for the old numbers.
 | STT engine per request | each engine is built on first use; an unknown engine gives 400 | `test_server.py` |
 | TTS style and language | passed to the engine; an unknown engine gives 400 | `test_tts_passes_style_and_lang_and_refuses_unknown_engines` |
 | Heavy engines | loading a second heavy engine unloads the first | `test_heavy_engines_unload_the_oldest` |
+| Qwen3-ASR | no language passed, terms as context, `fr` refused, under 100 ms gives empty text | `test_qwen3.py` |
 | Polish guard | cleanups pass; a new name or number, a lost negation, a lost corrected value, a big drop or an empty reply keep the input; vocabulary terms are known | `test_polish.py` |
 | Polish call | no thinking, temperature 0, context sent; Ollama errors and timeouts keep the input; short and verbatim send no call | `test_polish_*` |
 | Engines list and load errors | voices, styles and languages of engines that are not loaded; a missing model gives 503 with the fix | `test_engines_lists_voices_of_engines_that_are_not_loaded_and_load_errors_are_503` |

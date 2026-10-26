@@ -4,6 +4,8 @@
   On real accented conversational speech it makes less than half the errors of Whistle (decision 0005).
 - WhistleSTT: Whistle (Cactus Compute), a 17 MB model on the CPU. Fast (about 20 ms), but weak on real speech.
 
+- Qwen3STT: Qwen3-ASR 1.7B through MLX, for Hinglish and Hindi (decision 0014). Better words than Parakeet, but
+  about 6 times slower, so it is chosen per session, not by default.
 - CartesiaSTT: Cartesia Ink-Whisper through its batch HTTP API. A CLOUD engine: every call sends the audio to Cartesia.
 
 Neither local model is thread-safe, so every call takes a lock. The voice worker sends one piece or one turn at a
@@ -29,6 +31,7 @@ SAMPLE_RATE = 16000
 LANGUAGES = ("en", "de", "fr", "es", "it", "nl", "pl")  # Whistle
 PARAKEET_LANGUAGES = ("bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hr", "hu", "it", "lt", "lv", "mt",
                       "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk")
+QWEN3_LANGUAGES = ("en", "hi")  # checked only: the model finds the language of each piece, so Hinglish stays mixed
 QUOTES = "\"“”„«»"  # Whistle sometimes opens or closes a transcript with a quote mark
 # Keep-warm: after a few seconds without work, the next Parakeet call on the Apple GPU often costs 0.5 to 0.8 s instead
 # of about 0.09 s (measured 2026-10-22: 6 of 9 calls after 5 to 20 s idle). A short silent call after each idle second
@@ -124,6 +127,41 @@ class ParakeetSTT:
             ms = (time.perf_counter() - t0) * 1000
             self._last_call = self._last_real = time.monotonic()
         return {"text": clean(text), "language": lang, "ms": round(ms, 1), "audio_ms": audio_ms}
+
+
+class Qwen3STT:
+    """Qwen3-ASR 1.7B (Apache-2.0) in MLX bf16 (mlx-qwen3-asr), from a local folder (decision 0014).
+
+    It writes Hindi in Devanagari, and many English words of Hinglish speech in Devanagari too ("नेस्टेड" for
+    "nested"). The model finds the language of each piece itself: the voice worker sends "en" for every engine, and
+    forcing English would break Hinglish. The vocabulary goes in as its context prompt. MLX has its own GPU queues, so it does not take the torch lock (gpu.py).
+    """
+    sample_rate = SAMPLE_RATE
+    name = "qwen3-asr-1.7b"
+    takes_keywords = True
+
+    def __init__(self, model_dir: str | Path, language: str | None = None):
+        from mlx_qwen3_asr import Session
+
+        _check(language, QWEN3_LANGUAGES, "Qwen3-ASR")
+        self.language = language
+        self._lock = threading.Lock()
+        self._session = Session(str(model_dir))
+        self._session.transcribe(np.zeros(SAMPLE_RATE, dtype=np.float32))  # the first call compiles (about 2 s)
+
+    def transcribe(self, samples: np.ndarray, language: str | None = None,
+                   keywords: tuple[str, ...] = ()) -> dict:
+        """{"text", "language", "ms", "audio_ms"}. Less than 100 ms of audio gives empty text."""
+        lang = language or self.language
+        _check(lang, QWEN3_LANGUAGES, "Qwen3-ASR")
+        audio_ms = round(len(samples) / SAMPLE_RATE * 1000)
+        if len(samples) < SAMPLE_RATE // 10:
+            return {"text": "", "language": lang, "ms": 0.0, "audio_ms": audio_ms}
+        with self._lock:
+            t0 = time.perf_counter()
+            out = self._session.transcribe(np.asarray(samples, dtype=np.float32), context=", ".join(keywords))
+            ms = (time.perf_counter() - t0) * 1000
+        return {"text": clean(out.text), "language": lang, "ms": round(ms, 1), "audio_ms": audio_ms}
 
 
 class WhistleSTT:

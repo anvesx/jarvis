@@ -2,7 +2,8 @@
 
 Speech for orb, behind one HTTP service on 127.0.0.1:8200. It is local, except for one optional cloud engine:
 - **speech to text:** Parakeet TDT 0.6B v3 (the default, 2.5 GB, the final text), Whistle (17 MB, about 25 ms a
-  call: the voice worker's interim words), or Cartesia Ink-Whisper (**a cloud service**: the audio goes to Cartesia; it needs `CARTESIA_API_KEY`)
+  call: the voice worker's interim words), Qwen3-ASR 1.7B (4.1 GB, for Hinglish and Hindi, chosen per session:
+  [decision 0014](../../../docs/decisions/0014-qwen3-asr-for-hinglish.md)), or Cartesia Ink-Whisper (**a cloud service**: the audio goes to Cartesia; it needs `CARTESIA_API_KEY`)
 - **text to speech:** Kokoro (the live voice) or two speech LMs for the bench: maya1 (English) and indic-speak
   (22 Indian languages)
 

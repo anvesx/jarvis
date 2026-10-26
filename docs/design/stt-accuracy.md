@@ -297,6 +297,14 @@ research (research/streaming-stt.md) and the measurements are in decision 0012. 
 On all 480 `stt/dictation` rows (Parakeet, vocab + written form as input): corrections and lists fixed 75 % (target
 70 %), 0 added words, 8.8 % rejected (target < 20 %), p95 342 ms (target 400), fwer 20.2 → 14.4 %.
 
+### STT-5 result (2026-10-26; decision 0014)
+| Engine | Dictation WER / entity | EdAcc South Asian WER | Hinglish CER | ms p50 English |
+|---|---|---|---|---|
+| Parakeet v3 | 13.5 / 57.6 % | 7.6 % | 90.1 % (unusable) | 136 |
+| Qwen3-ASR 1.7B | 7.9 / 65.3 % | 6.7 % | 47.8 % (mostly script) | 795 |
+
+Granite Speech 4.1 and 5.0 do not run on transformers 5.20 here. Qwen3 is the `qwen3` engine, chosen per session.
+
 ## 6. Tickets
 **Process (changed 2026-10-23, the owner's rule):**
 - All work is on one branch, `feat/stt-accuracy`, in the main checkout. There are no worktrees.
@@ -312,7 +320,7 @@ On all 480 `stt/dictation` rows (Parakeet, vocab + written form as input): corre
 | STT-3 | Vocabulary: Whistle `keywords`, phonetic correction, header + team file, worker sends its terms. **Done 2026-10-23**, `entity` 65.5 % of the 80 % target (section 5) | STT-2 | `entity` on `stt/dictation` ≥ 80 % for parakeet with the vocabulary; no WER rise on edacc/librispeech **without** a vocabulary match; false-replacement test set (common words) passes |
 | STT-1 | Engine choice: Parakeet default and/or the interim/final split; MLX bf16 Parakeet measured. **Built 2026-10-24**: Parakeet final, Whistle interims (decision 0012). `make e2e` passed with Whistle (first audio p50 2.61 s); with Parakeet on a 16 GB Mac it swapped (below), so the live check is the owner's localhost test | STT-0 | decision record with WER, latency p50/p90 and memory; `make e2e` passes; turn suite p50 within +0.15 s of the Whistle baseline |
 | STT-4 | Guarded LLM polish, off the turn path; LLM candidates benchmarked. **Done 2026-10-26**: qwen2.5:1.5b behind the word guard (decision 0013) | STT-2, STT-3 | on `stt/dictation`: self-correction and list sentences fixed ≥ 70 %; `added_words` after the guard = 0; guard rejects < 20 %; p95 ≤ 400 ms; captions show the polished text |
-| STT-5 | Spike: Qwen3-ASR-1.7B (MLX, with context prompt) and Granite Speech on the bench | STT-0 | decision record: keep Parakeet, or add an engine; numbers for edacc South Asian, dictation `entity`, latency and memory |
+| STT-5 | Spike: Qwen3-ASR-1.7B (MLX, with context prompt) and Granite Speech on the bench. **Done 2026-10-26**: Parakeet stays the default; Qwen3-ASR added as a per-session engine for Hinglish (decision 0014) | STT-0 | decision record: keep Parakeet, or add an engine; numbers for edacc South Asian, dictation `entity`, latency and memory |
 
 **Order, one at a time:** STT-0 → STT-2 → STT-3 → STT-1 → STT-4 → STT-5.
 

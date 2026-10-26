@@ -236,7 +236,7 @@ def create_app(stt=None, tts=None, stt_format: str = "written", vocabulary: tupl
     return app
 
 
-STT_ENGINES = ("whistle", "parakeet", "cartesia")
+STT_ENGINES = ("whistle", "parakeet", "qwen3", "cartesia")
 CARTESIA_NO_KEY = ("CARTESIA_API_KEY is not set. Add the line CARTESIA_API_KEY=... to the .env file of the repo "
                    "(it is not in git), then restart the speech service.")
 TTS_ENGINES = ("kokoro", "maya1", "indic-speak")
@@ -245,7 +245,7 @@ POLISH_MODEL = "qwen2.5:1.5b"  # chosen by the STT-4 bench (decision 0013)
 
 def make_stt(engine: str, language: str | None):
     """A speech-to-text engine: parakeet (the default, decisions 0005 and 0012), whistle (the voice worker's
-    interim words) or cartesia (a cloud service)."""
+    interim words), qwen3 (Hinglish and Hindi, decision 0014) or cartesia (a cloud service)."""
     from orb_speech import models
 
     if engine not in STT_ENGINES:
@@ -259,6 +259,9 @@ def make_stt(engine: str, language: str | None):
         if not key:
             raise RuntimeError(CARTESIA_NO_KEY)
         return CartesiaSTT(key, language=language, version=os.environ.get("ORB_CARTESIA_VERSION") or CARTESIA_VERSION)
+    if engine == "qwen3":
+        from orb_speech.stt import Qwen3STT
+        return Qwen3STT(models.qwen3_dir(fetch_missing=False), language=language)
     from orb_speech.stt import ParakeetSTT
     return ParakeetSTT(models.parakeet_dir(fetch_missing=False), language=language)
 
@@ -275,7 +278,7 @@ def build() -> FastAPI:
     if not os.environ.get("CARTESIA_API_KEY", "").strip():
         stt_meta["cartesia"]["unavailable"] = CARTESIA_NO_KEY
     stt = Registry({name: (lambda n=name: make_stt(n, language)) for name in STT_ENGINES},
-                   os.environ.get("ORB_STT_ENGINE", "parakeet"), heavy=frozenset({"parakeet"}), meta=stt_meta)
+                   os.environ.get("ORB_STT_ENGINE", "parakeet"), heavy=frozenset({"parakeet", "qwen3"}), meta=stt_meta)
     kokoro = lambda: KokoroTTS(models.path(os.environ.get("ORB_TTS_MODEL", "kokoro-v1.0.int8.onnx"), verify=True),
                                models.path("voices-v1.0.bin", verify=True),
                                voice=os.environ.get("ORB_TTS_VOICE", "af_heart"))
