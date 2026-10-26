@@ -62,6 +62,8 @@ class Settings:
     stt_interim_engine: str = "whistle"  # the interim words (decision 0012)
     stt_language: str = "en"
     stt_vocabulary: str = ""        # comma-separated terms for the speech service (header X-Orb-Vocabulary)
+    polish: str = ""                # the guarded LLM polish of each final transcript, for the caption (decision 0013):
+                                    # verbatim (off), light or medium; empty: the speech service's ORB_POLISH_STRENGTH
     tts_voice: str = ""             # empty: the speech service's default voice
     interim_every: float = 0.3      # seconds of speech between interim transcripts
     cloud_interim_every: float = 1.0  # the same for a cloud STT: each interim call pays for the whole piece again
@@ -90,6 +92,7 @@ class Settings:
             stt_interim_engine=os.environ.get("ORB_VOICE_STT_INTERIM_ENGINE", cls.stt_interim_engine).strip(),
             stt_language=os.environ.get("ORB_STT_LANGUAGE", cls.stt_language).strip(),
             stt_vocabulary=os.environ.get("ORB_STT_VOCABULARY", "").strip(),
+            polish=os.environ.get("ORB_VOICE_POLISH", "").strip(),
             tts_voice=os.environ.get("ORB_TTS_VOICE", "").strip(),
             interim_every=_num("ORB_INTERIM_EVERY_S", cls.interim_every),
             cloud_interim_every=_num("ORB_CLOUD_INTERIM_EVERY_S", cls.cloud_interim_every),

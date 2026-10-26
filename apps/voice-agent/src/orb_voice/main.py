@@ -26,7 +26,8 @@ from livekit.agents.voice.agent_session import SessionConnectOptions
 from livekit.plugins import silero
 
 from orb_voice.config import Settings, check_livekit, load_repo_env, session_for
-from orb_voice.plugins import FirstClauseTokenizer, LiveSTT, OrbLLM, OrbSTT, OrbTTS, TurnTracker, stt_engines_info
+from orb_voice.plugins import (FirstClauseTokenizer, LiveSTT, OrbLLM, OrbSTT, OrbTTS, TurnTracker, polish_text,
+                               stt_engines_info)
 
 log = logging.getLogger("orb.voice")
 BENCH_TOPIC = "orb.bench"
@@ -167,11 +168,30 @@ async def entry(ctx: JobContext) -> None:
     def _user_state(ev) -> None:
         bench.send("user_state", state=ev.new_state)
 
+    last_reply = {"text": ""}  # the agent's last words: context for the polish
+    polishing: set[asyncio.Task] = set()
+
+    async def _polish(heard: str) -> None:
+        """The polished text replaces the caption of `heard`; the agent keeps the transcript (decision 0013)."""
+        try:
+            out = await polish_text(http, s.speech_url, heard, context=last_reply["text"], strength=s.polish,
+                                    vocabulary=s.stt_vocabulary)
+        except httpx.HTTPError as e:
+            log.warning("polish failed", extra={"session": sid, "error": type(e).__name__})
+            return
+        log.info("polish", extra={"session": sid, "applied": out["applied"], "reason": out["reason"], "ms": out["ms"]})
+        bench.send("polished", heard=heard, text=out["text"], applied=out["applied"], reason=out["reason"],
+                   ms=out["ms"])
+
     @session.on("user_input_transcribed")
     def _transcribed(ev) -> None:
         if ev.is_final:
             log.info("user words", extra={"session": sid, "chars": len(ev.transcript),
                                           **({"text": ev.transcript} if s.log_text else {})})
+            if s.polish != "verbatim" and ev.transcript.strip():
+                task = asyncio.create_task(_polish(ev.transcript))
+                polishing.add(task)
+                task.add_done_callback(polishing.discard)
         bench.send("transcript", final=ev.is_final, text=ev.transcript)
 
     @session.on("metrics_collected")
@@ -184,6 +204,8 @@ async def entry(ctx: JobContext) -> None:
     @session.on("conversation_item_added")
     def _item(ev) -> None:
         item = ev.item
+        if getattr(item, "role", None) == "assistant" and getattr(item, "text_content", None):
+            last_reply["text"] = item.text_content
         metrics = getattr(item, "metrics", None) or {}
         if getattr(item, "role", None) == "assistant" and metrics.get("e2e_latency") is not None:
             log.info("turn latency", extra={"session": sid, "e2e_s": round(metrics["e2e_latency"], 3),

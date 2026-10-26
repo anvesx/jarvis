@@ -9,7 +9,7 @@ from livekit import rtc
 from livekit.agents import APIConnectOptions, APIError, APIStatusError, llm, stt, utils, vad
 from livekit.agents.types import NOT_GIVEN
 
-from orb_voice.plugins import LiveSTT, OrbLLM, OrbSTT, OrbTTS, TurnTracker, turn_text
+from orb_voice.plugins import LiveSTT, OrbLLM, OrbSTT, OrbTTS, TurnTracker, polish_text, turn_text
 
 NO_RETRY = APIConnectOptions(max_retry=0)
 
@@ -450,3 +450,21 @@ def test_the_worker_learns_which_stt_engines_are_cloud_services():
         raise httpx.ConnectError("refused", request=request)
 
     assert asyncio.run(ask(down)) == (set(), "")  # the speech service is down: the call goes on with local settings
+
+
+def test_polish_text_sends_the_context_strength_and_vocabulary():
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append((request.url.path, json.loads(request.content), request.headers.get("X-Orb-Vocabulary")))
+        return httpx.Response(200, json={"text": "Send it to Sanjay.", "applied": True, "reason": None, "ms": 120.0,
+                                         "model": "m"})
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+            return await polish_text(http, "http://speech", "Send it to Priya, I mean Sanjay.", context="Who?",
+                                     strength="light", vocabulary="Sanjay")
+    out = asyncio.run(go())
+    assert out["text"] == "Send it to Sanjay." and out["applied"]
+    assert seen == [("/v1/polish", {"text": "Send it to Priya, I mean Sanjay.", "context": "Who?", "strength": "light"},
+                     "Sanjay")]

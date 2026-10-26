@@ -10,6 +10,10 @@ The text of `POST /v1/stt` is put in written form ("pull request number 4821" be
 becomes "3:30 PM") by `orb_speech.textfmt.written`. The answer also has `raw`, the engine's own text. `?format=raw`
 or `ORB_STT_FORMAT=raw` turns it off. The rules are in [decision 0010](../../../docs/decisions/0010-written-form-formatter.md).
 
+`POST /v1/polish` cleans a final transcript with a small local LLM (qwen2.5:1.5b through Ollama:
+`ollama pull qwen2.5:1.5b`): self-corrections, spoken lists, command symbols. A word guard keeps the input when the
+model invents a word or changes the meaning ([decision 0013](../../../docs/decisions/0013-guarded-llm-polish.md)).
+
 A request can name its engine, so the bench switches models without a restart. The design is in [LLD.md](LLD.md).
 The model choices are in [decision 0005](../../../docs/decisions/0005-stt-parakeet.md) and
 [decision 0007](../../../docs/decisions/0007-whistle-default-and-tts-results.md) and

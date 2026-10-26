@@ -17,6 +17,7 @@ No audio and no text leaves the machine (except with the cloud engine `cartesia`
 | Endpoint | Body | Limits | Answer |
 |---|---|---|---|
 | `POST /v1/stt?sample_rate=16000[&language=en][&engine=][&format=written\|raw][&vocab=on\|off]`, header `X-Orb-Vocabulary: term, term, …` | PCM16 LE mono | ≤ 60 s; rate 8, 16, 24 or 48 kHz; a language of the engine (Whistle: en de fr es it nl pl; Parakeet: 25 European languages; Cartesia: any ISO-639 code, about 100); `format` is `written` or `raw`, at most 16 characters, and defaults to `ORB_STT_FORMAT`; `vocab` is `on` (default) or `off`; the header has at most 8,192 bytes and, after the split at commas, at most 200 terms of 1 to 64 characters and 4,096 bytes, with no control character | `{"text", "raw", "stages", "language", "engine", "ms", "audio_ms"}`. `text` is the formatted text. `raw` is the engine's text after `clean()`. `stages` maps `asr` (the engine's ms, with `clean()`) `vocab` (ms of the vocabulary pass, only when there are terms) and `written` (ms of the formatter, only with `format=written`) to milliseconds. 400 for a bad `format`, `vocab`, vocabulary header, `sample_rate` or `language`; 502 when the engine's own service fails; 503 when the engine cannot load |
+| `POST /v1/polish`, header `X-Orb-Vocabulary` as for `/v1/stt` | `{"text", "context"?, "strength"?}` | text 1 to 4,000 characters, context ≤ 4,000 (the last 500 are used), strength `verbatim`, `light` or `medium` (default `ORB_POLISH_STRENGTH`) | `{"text", "applied", "reason", "ms", "model"}`: the polished text, or the input with the reason the guard kept it (`short`, `skipped`, `new word`, `changed`, `dropped`, `negation`, `lost correction`, `slow`, `empty`, `failed`). 400 for a bad strength or vocabulary header; 503 without a polish model |
 | `POST /v1/tts` | `{"text", "engine"?, "voice"?, "speed"?, "style"?, "lang"?}` | text 1 to 2,000 characters; engine ≤ 32, voice ≤ 400, style ≤ 64, lang ≤ 16 characters; then the engine's own checks (below) | a stream of PCM16 mono; headers `X-Sample-Rate` (24000), `X-Engine` |
 | `GET /v1/engines` | none | | per kind: the engines, the default, the loaded ones, `cloud` (engines that send the audio to another company) and `unavailable` (engine → the reason, for example a missing key); per TTS engine: `voices`, `styles`, `langs` (known without a load) |
 | `GET /health` | none | | which models are loaded |
@@ -28,7 +29,7 @@ The engine checks of `/v1/tts`:
 | `maya1` | a description in words, ≤ 400 characters, without `"`, `<` or `>`; 3 presets | ignored (emotion tags such as `<laugh>` go in the text) | English only | none, or 1.0 |
 | `indic-speak` | one of 44 names (case does not matter); default: the female voice of `lang` | one of 14 trained tags, or none | 22 Indian languages, `en`, `en-us`, `en-gb` | none, or 1.0 |
 
-Settings: `ORB_STT_ENGINE` (`parakeet`, decision 0012; the voice worker asks `whistle` for interim words), `ORB_STT_FORMAT` (`written`; a bad value stops the start), `ORB_STT_VOCABULARY_FILE` (the team's terms, one per line, `#` comments; a missing or bad file stops the start), `ORB_STT_LANGUAGE`, `ORB_TTS_ENGINE` (`kokoro`), `ORB_TTS_MODEL`,
+Settings: `ORB_STT_ENGINE` (`parakeet`, decision 0012; the voice worker asks `whistle` for interim words), `ORB_STT_FORMAT` (`written`; a bad value stops the start), `ORB_STT_VOCABULARY_FILE` (the team's terms, one per line, `#` comments; a missing or bad file stops the start), `ORB_POLISH_MODEL` (`qwen2.5:1.5b`, through Ollama at `OLLAMA_URL`), `ORB_POLISH_STRENGTH` (`medium`; a bad value stops the start), `ORB_STT_LANGUAGE`, `ORB_TTS_ENGINE` (`kokoro`), `ORB_TTS_MODEL`,
 `ORB_TTS_VOICE`, `ORB_SPEECH_PORT`, `ORB_MODELS_DIR`, `CARTESIA_API_KEY` and `ORB_CARTESIA_VERSION` (default
 `2026-08-14`). The service reads only `CARTESIA_*` and `ORB_CARTESIA_*` keys from the repo `.env`. End-of-turn detection is not here: the voice worker runs
 LiveKit's turn detector in its own process (decision 0006).
@@ -50,6 +51,13 @@ for the old numbers.
   → `clean()`: stray quote marks at the ends and the fillers "uh", "um", "erm" removed (this is `raw`) →
   `vocab.correct()` when there are terms → `written()` unless `format=raw` (this is `text`). Both texts and the ms
   of each stage go in the answer.
+- **Polish** (`polish.py`, decision 0013): skip 3 words or fewer and `verbatim` → Ollama `/api/chat` with
+  `ORB_POLISH_MODEL` (`qwen2.5:1.5b`), temperature 0, no thinking, a 400 ms timeout, the strength's instruction, 4
+  examples and the agent's last reply as context → `guard()`: word tokens of input and output (list markers dropped);
+  reject a content word that is not in the input, the vocabulary, or a join of 2–3 input words; (replaced + inserted)
+  > 35 % (medium) or 15 % (light) of the input's words; dropped > 50 %; fewer negations; a lost corrected value (the
+  first content word after "no wait", "I mean", "make that"…). A rejection returns the input. The model loads at
+  start unless the strength is `verbatim`.
 - **Vocabulary** (`vocab.py`, `correct(text, terms)`, decision 0011): the terms are the team file's, then the
   request's, without repeats (ignoring case; the first spelling stays). The list is compiled once and cached by its
   value. For each word, the longest span of 1 to 3 words that sounds like a term becomes the term, written as given
@@ -156,6 +164,8 @@ for the old numbers.
 | STT engine per request | each engine is built on first use; an unknown engine gives 400 | `test_server.py` |
 | TTS style and language | passed to the engine; an unknown engine gives 400 | `test_tts_passes_style_and_lang_and_refuses_unknown_engines` |
 | Heavy engines | loading a second heavy engine unloads the first | `test_heavy_engines_unload_the_oldest` |
+| Polish guard | cleanups pass; a new name or number, a lost negation, a lost corrected value, a big drop or an empty reply keep the input; vocabulary terms are known | `test_polish.py` |
+| Polish call | no thinking, temperature 0, context sent; Ollama errors and timeouts keep the input; short and verbatim send no call | `test_polish_*` |
 | Engines list and load errors | voices, styles and languages of engines that are not loaded; a missing model gives 503 with the fix | `test_engines_lists_voices_of_engines_that_are_not_loaded_and_load_errors_are_503` |
 | Text pieces; token limit | sentences (also "।"); pieces ≤ 200 characters, cut in the second half; a cap of 2520 | `test_tts_lm.py::test_split_text_*`, `test_token_limit_*` |
 | SNAC frames | the 3 levels in the right order; a token out of place drops its frame | `test_frames_*` |

@@ -95,7 +95,7 @@ main { min-height: 0; }
 .cap { display: grid; gap: 2px; justify-items: center; }
 .cap-who { font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-2); }
 .cap:has(.cap-text:empty) .cap-who { visibility: hidden; }  /* no words yet: no label */
-.cap-text { font-size: 17px; line-height: 1.4; color: var(--ink); }
+.cap-text { font-size: 17px; line-height: 1.4; color: var(--ink); white-space: pre-line; }  /* a polished list has lines */
 .cap-text.interim { color: var(--muted); }  /* the STT may still change these words */
 .cap.agent .cap-text { color: var(--accent); max-height: 8.4em; overflow-y: auto; scrollbar-width: none; }
 .orb-state { font-family: var(--f-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); min-height: 1.5em; }
@@ -970,6 +970,12 @@ function onBench(e) {
   else if (e.type === "agent_read") { const t = turns[turns.length - 1]; if (t) t.read = e.seconds; renderTurns(); }
   else if (e.type === "agent_decision") { const t = turns[turns.length - 1]; if (t) t.persona = e.persona; renderTurns(); }
   else if (e.type === "transcript") { if (e.final) { finals.push(e.text); interim = ""; } else interim = e.text; renderHeard(); }
+  else if (e.type === "polished") {  // the guarded LLM polish of a final transcript (decision 0013): it replaces that text
+    if (!e.applied) return event(`polish kept the transcript: ${e.reason} (${Math.round(e.ms)} ms)`);
+    if ($("cap-you").textContent === e.heard) showCap("you", e.text, false);
+    const i = finals.lastIndexOf(e.heard);
+    if (i >= 0) { finals[i] = e.text; renderHeard(); }
+  }
   else if (e.type === "agent_reply") {  // chars 0: the LLM wrote no words, so the agent stays silent for this turn
     $("vwarn").hidden = e.chars > 0;
     $("vwarn").textContent = e.chars > 0 ? "" : "The LLM wrote no words for this turn. Say it again, or choose another LLM.";

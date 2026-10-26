@@ -4,10 +4,13 @@
     ORB_STT_ENGINE=whistle python -m orb_speech.server   # another default STT; any engine can still be asked for
     ORB_STT_FORMAT=raw python -m orb_speech.server       # the default of format=: written (default) or raw
     ORB_STT_VOCABULARY_FILE=team.txt python -m orb_speech.server  # the team's terms, one per line
+    ORB_POLISH_MODEL=qwen2.5:1.5b python -m orb_speech.server       # the LLM of /v1/polish (through Ollama, OLLAMA_URL)
 
 POST /v1/stt?sample_rate=16000[&language=en][&engine=whistle|parakeet][&format=written|raw][&vocab=on|off]
                header X-Orb-Vocabulary: the request's own terms, comma separated
                                              body: PCM16 mono  ->  {"text", "raw", "stages", "language", "engine", "ms", "audio_ms"}
+POST /v1/polish {"text", "context"?, "strength"?: verbatim|light|medium}, header X-Orb-Vocabulary as for /v1/stt
+                                             ->  {"text", "applied", "reason", "ms", "model"} (the guarded LLM polish)
 POST /v1/tts   {"text", "engine"?: kokoro|maya1|indic-speak, "voice"?, "speed"?, "style"?, "lang"?}
                                              ->  a stream of PCM16 mono at the engine's rate (header X-Sample-Rate)
 GET  /v1/engines                             ->  the STT and TTS engines, which are loaded, and the voices
@@ -28,7 +31,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.requests import ClientDisconnect
 from pydantic import BaseModel, Field
 
-from orb_speech import audio, vocab
+from orb_speech import audio, polish, vocab
 from orb_speech.engines import EngineError, Registry
 from orb_speech.textfmt import written
 
@@ -38,6 +41,12 @@ STT_FORMATS = ("written", "raw")
 VOCAB_SWITCH = ("on", "off")
 VOCAB_HEADER = "X-Orb-Vocabulary"
 CHUNK_BYTES = 4800  # 100 ms of 24 kHz PCM16
+
+
+class PolishRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    context: str = Field(default="", max_length=4000)  # the agent's last reply; the last 500 chars are used
+    strength: str | None = Field(default=None, max_length=16)
 
 
 class SpeakRequest(BaseModel):
@@ -107,15 +116,18 @@ def check_vocab(value: str | None) -> bool:
     raise ValueError(f"vocab must be one of {', '.join(VOCAB_SWITCH)}, not {value!r}.")
 
 
-def create_app(stt=None, tts=None, stt_format: str = "written", vocabulary: tuple[str, ...] = ()) -> FastAPI:
+def create_app(stt=None, tts=None, stt_format: str = "written", vocabulary: tuple[str, ...] = (),
+               polisher: polish.Polisher | None = None, strength: str = "medium") -> FastAPI:
     """The app with the given engines: a Registry, one engine, or None. A missing kind gives 503 on its endpoint.
 
     `stt_format` is the default of `format` for /v1/stt (setting ORB_STT_FORMAT). `vocabulary` is the team's term list
-    (setting ORB_STT_VOCABULARY_FILE); a request adds its own terms in the X-Orb-Vocabulary header.
+    (setting ORB_STT_VOCABULARY_FILE); a request adds its own terms in the X-Orb-Vocabulary header. `polisher` serves
+    /v1/polish, and `strength` is the default of its `strength` (setting ORB_POLISH_STRENGTH).
     """
     stt, tts = as_registry(stt), as_registry(tts)
     stt_format = check_format(stt_format)
     vocabulary = vocab.check_terms(vocabulary, "vocabulary file")
+    strength = polish.check_strength(strength)
     app = FastAPI(title="orb speech", docs_url=None, redoc_url=None)
 
     def describe(reg: Registry | None) -> dict | None:
@@ -178,6 +190,18 @@ def create_app(stt=None, tts=None, stt_format: str = "written", vocabulary: tupl
                  len(terms), out["ms"])
         return {**out, "text": text, "raw": raw, "stages": stages, "engine": name}
 
+    @app.post("/v1/polish")
+    async def polish_text(request: Request, req: PolishRequest):
+        if polisher is None:
+            raise HTTPException(503, "The polish model is not set up.")
+        try:
+            level = polish.check_strength(req.strength, strength)
+            terms = vocab.merge(vocabulary, vocab.parse_header(request.headers.get(VOCAB_HEADER)))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        out = await asyncio.to_thread(polisher.polish, req.text, terms, req.context, level)
+        return {"text": out.text, "applied": out.applied, "reason": out.reason, "ms": out.ms, "model": polisher.model}
+
     @app.post("/v1/tts")
     async def speak(req: SpeakRequest):
         if tts is None:
@@ -216,6 +240,7 @@ STT_ENGINES = ("whistle", "parakeet", "cartesia")
 CARTESIA_NO_KEY = ("CARTESIA_API_KEY is not set. Add the line CARTESIA_API_KEY=... to the .env file of the repo "
                    "(it is not in git), then restart the speech service.")
 TTS_ENGINES = ("kokoro", "maya1", "indic-speak")
+POLISH_MODEL = "qwen2.5:1.5b"  # chosen by the STT-4 bench (decision 0013)
 
 
 def make_stt(engine: str, language: str | None):
@@ -264,10 +289,15 @@ def build() -> FastAPI:
     stt_format = check_format(os.environ.get("ORB_STT_FORMAT"))  # a bad value stops the start, not the first call
     vocab_file = os.environ.get("ORB_STT_VOCABULARY_FILE", "").strip()
     vocabulary = vocab.load_file(vocab_file) if vocab_file else ()  # a missing or bad file stops the start too
+    strength = polish.check_strength(os.environ.get("ORB_POLISH_STRENGTH"))
+    polisher = polish.Polisher(os.environ.get("ORB_POLISH_MODEL", POLISH_MODEL),
+                               os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
     stt.get(), tts.get()  # the defaults load now, so the first call is fast
-    log.info("models loaded in %.1f s (stt %s, tts %s, format %s, %d vocabulary terms)", time.perf_counter() - t0,
-             stt.default, tts.default, stt_format, len(vocabulary))
-    return create_app(stt, tts, stt_format, vocabulary)
+    if strength != "verbatim":
+        polisher.warm()
+    log.info("models loaded in %.1f s (stt %s, tts %s, format %s, %d vocabulary terms, polish %s %s)",
+             time.perf_counter() - t0, stt.default, tts.default, stt_format, len(vocabulary), polisher.model, strength)
+    return create_app(stt, tts, stt_format, vocabulary, polisher, strength)
 
 
 def main():

@@ -43,6 +43,10 @@ The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a
      the preflight is dropped.
    - Speech end (Silero: 0.55 s of silence): the final transcript. When the preflight's pause ended the piece, the
      final is the preflight text (no second call), so LiveKit keeps the early reply.
+   - **Polish** (decision 0013): each final transcript also goes to `/v1/polish` in the background, with the agent's
+     last reply as context. The answer goes out as the event `polished` (`heard`, `text`, `applied`, `reason`, `ms`);
+     the call page swaps the caption that still shows `heard`. The agent keeps the transcript. Off with
+     `ORB_VOICE_POLISH=verbatim`; a failed call is only logged.
 4. **Decide the end of the turn** (LiveKit): the turn detector reads the audio of the turn. Likely finished: commit
    after `min_delay` (0.3 s) from the end of speech; unlikely: wait up to `max_delay` (2.5 s) for more speech.
 5. **Reply** (`OrbLLM`): send only the person's words since the agent last spoke, `channel="voice"`, to
@@ -66,6 +70,7 @@ The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a
 | Endpointing min / max delay | 0.3 / 2.5 s | `ORB_MIN_ENDPOINTING_S`, `ORB_MAX_ENDPOINTING_S` | LiveKit defaults with the audio turn detector |
 | Interruption | 0.5 s and 2 words; resume after 2.0 s | `ORB_MIN_INTERRUPTION_S`, `_WORDS` | chosen: "Sure." is 1 word |
 | STT vocabulary | comma-separated terms, sent on every call; empty sends none | `ORB_STT_VOCABULARY` | chosen; the speech service checks the limits (decision 0011) |
+| Polish strength | empty: the speech service's `ORB_POLISH_STRENGTH` (medium) | `ORB_VOICE_POLISH` | decision 0013; `verbatim` sends no call |
 | Interim engine | `whistle` | `ORB_VOICE_STT_INTERIM_ENGINE` | measured: Parakeet interims cost 11–20× the final's GPU work and delay the final up to 230 ms; Whistle's leave it unchanged (decision 0012) |
 | Interim transcript | every 0.3 s of speech | `ORB_INTERIM_EVERY_S` | measured: 0.2 s did not stop barge-in sooner (0.95 s) |
 | Interim transcript, cloud interim engine | every 1.0 s of speech | `ORB_CLOUD_INTERIM_EVERY_S` | each call pays for the whole piece again: for 5 s of speech, 17.5 s of billed audio instead of 47 s (orb-speech LLD) |

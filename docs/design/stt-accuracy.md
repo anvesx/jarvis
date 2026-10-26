@@ -142,6 +142,9 @@ used because the body is PCM. Limits: at most 200 terms and 4 KB, checked before
 
   A rejection keeps the deterministic text and logs the reason (no words), like Wispr's `format_skip_reason`.
 - **Skipped** for 3 words or fewer, and for `editing_strength=verbatim`.
+- **Built (decision 0013):** `POST /v1/polish`, model `qwen2.5:1.5b`. Two guard rules were added after the bench: a
+  dropped negation, and a dropped corrected value ("Tuesday, no wait, Wednesday" → "Tuesday"). The agent's history
+  keeps the transcript; only the caption shows the polished text.
 
 ### 4.6 Engine choice (STT-1)
 - **Default engine:** `ORB_STT_ENGINE=parakeet` (decided in 0012). Decision 0007 chose Whistle for speed. The bench
@@ -290,6 +293,10 @@ research (research/streaming-stt.md) and the measurements are in decision 0012. 
   21–41 s until the worker gave up. The agent LLM is out of scope here (owner, 2026-10-26), so the live check moves
   to the owner's localhost test. On a 16 GB Mac, close other large apps first, or set `ORB_STT_ENGINE=whistle`.
 
+### STT-4 result (2026-10-26; decision 0013)
+On all 480 `stt/dictation` rows (Parakeet, vocab + written form as input): corrections and lists fixed 75 % (target
+70 %), 0 added words, 8.8 % rejected (target < 20 %), p95 342 ms (target 400), fwer 20.2 → 14.4 %.
+
 ## 6. Tickets
 **Process (changed 2026-10-23, the owner's rule):**
 - All work is on one branch, `feat/stt-accuracy`, in the main checkout. There are no worktrees.
@@ -304,7 +311,7 @@ research (research/streaming-stt.md) and the measurements are in decision 0012. 
 | STT-2 | Deterministic formatter (`textfmt.py`) + API `format` + `raw`. **Done 2026-10-23**, `fwer` −23.5 % of the −30 % target (section 5) | STT-0 metrics (for the exit only) | on `stt/dictation`, parakeet: `fwer` falls by ≥ 30 % relative, `entity` rises; normalized WER on edacc/librispeech no worse than +0.2 points; `added_words` = 0; p95 ≤ 5 ms; idempotence and preflight==final tests |
 | STT-3 | Vocabulary: Whistle `keywords`, phonetic correction, header + team file, worker sends its terms. **Done 2026-10-23**, `entity` 65.5 % of the 80 % target (section 5) | STT-2 | `entity` on `stt/dictation` ≥ 80 % for parakeet with the vocabulary; no WER rise on edacc/librispeech **without** a vocabulary match; false-replacement test set (common words) passes |
 | STT-1 | Engine choice: Parakeet default and/or the interim/final split; MLX bf16 Parakeet measured. **Built 2026-10-24**: Parakeet final, Whistle interims (decision 0012). `make e2e` passed with Whistle (first audio p50 2.61 s); with Parakeet on a 16 GB Mac it swapped (below), so the live check is the owner's localhost test | STT-0 | decision record with WER, latency p50/p90 and memory; `make e2e` passes; turn suite p50 within +0.15 s of the Whistle baseline |
-| STT-4 | Guarded LLM polish, off the turn path; LLM candidates benchmarked | STT-2, STT-3 | on `stt/dictation`: self-correction and list sentences fixed ≥ 70 %; `added_words` after the guard = 0; guard rejects < 20 %; p95 ≤ 400 ms; captions show the polished text |
+| STT-4 | Guarded LLM polish, off the turn path; LLM candidates benchmarked. **Done 2026-10-26**: qwen2.5:1.5b behind the word guard (decision 0013) | STT-2, STT-3 | on `stt/dictation`: self-correction and list sentences fixed ≥ 70 %; `added_words` after the guard = 0; guard rejects < 20 %; p95 ≤ 400 ms; captions show the polished text |
 | STT-5 | Spike: Qwen3-ASR-1.7B (MLX, with context prompt) and Granite Speech on the bench | STT-0 | decision record: keep Parakeet, or add an engine; numbers for edacc South Asian, dictation `entity`, latency and memory |
 
 **Order, one at a time:** STT-0 → STT-2 → STT-3 → STT-1 → STT-4 → STT-5.
@@ -312,9 +319,8 @@ research (research/streaming-stt.md) and the measurements are in decision 0012. 
 ## 7. Open questions for the owner
 1. ~~**The default engine (STT-1).**~~ Answered 2026-10-24: Parakeet hears each piece once for the final; Whistle
    writes the interim words (decision 0012).
-2. **Hinglish.** Must `stt/dictation` include Hinglish speech now? Parakeet does not list Hindi. If yes, STT-5 moves
-   up.
-3. **Model downloads.** STT-4 and STT-5 need about 1–4 GB each of new weights over a slow network. Is that fine?
+2. ~~**Hinglish.**~~ Answered 2026-10-24: yes, now. STT-5 weighs Hinglish clips in its decision.
+3. ~~**Model downloads.**~~ Answered 2026-10-24: yes.
 4. **Team vocabulary.** Is there a list of company names, repos and people to seed `ORB_STT_VOCABULARY_FILE`?
 
 ## 8. Risks

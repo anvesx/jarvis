@@ -55,6 +55,17 @@ def mono_pcm16(frame: rtc.AudioFrame) -> bytes:
     return data.tobytes()
 
 
+async def polish_text(http: httpx.AsyncClient, base_url: str, text: str, *, context: str = "", strength: str = "",
+                      vocabulary: str = "") -> dict:
+    """The speech service's guarded LLM polish of a final transcript (decision 0013): {"text", "applied", "reason",
+    "ms", "model"}. It is for the caption only; the agent already has the transcript. Raises httpx.HTTPError."""
+    body = {"text": text, "context": context, **({"strength": strength} if strength else {})}
+    headers = {"X-Orb-Vocabulary": vocabulary.encode("utf-8")} if vocabulary.strip() else {}
+    r = await http.post(f"{base_url}/v1/polish", json=body, headers=headers, timeout=5.0)
+    r.raise_for_status()
+    return r.json()
+
+
 class OrbSTT(stt.STT):
     """Batch speech to text through the orb speech service: POST /v1/stt."""
 
