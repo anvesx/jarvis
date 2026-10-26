@@ -30,17 +30,23 @@ The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a
 2. **Join** (`entry`): find the session, `PUT` it at the agent service (topic "Open discussion" if new), read its
    config, then ask the speech service which STT engines are cloud services (`GET /v1/engines`). Build the
    `AgentSession` with the session's engines. For Parakeet, one silent STT call opens the speech service's keep-warm
-   window. For a cloud engine (Cartesia), the worker logs a warning, asks for interim transcripts only every
-   `ORB_CLOUD_INTERIM_EVERY_S` (1.0 s), and sends no warm-up call (silence is billed).
+   window. Two engines: the final engine (the session's, else the speech service's default: Parakeet) writes the
+   preflight and final texts, and the interim engine (`ORB_VOICE_STT_INTERIM_ENGINE`, Whistle) writes the interim
+   words (decision 0012). For a cloud engine (Cartesia), the worker logs a warning; a cloud interim engine is asked
+   only every `ORB_CLOUD_INTERIM_EVERY_S` (1.0 s), and a cloud final engine gets no warm-up call (silence is billed).
 3. **Hear** (`LiveSTT`, own VAD stream):
    - Speech start: a new piece; the frames from Silero's prefix (0.5 s) are kept.
-   - While speaking: every 0.3 s of speech, the piece so far goes to `/v1/stt` as an interim transcript. A late
-     interim of an old piece is dropped.
+   - While speaking: every 0.3 s of speech, the piece so far goes to `/v1/stt` with the interim engine as an
+     interim transcript. A late interim of an old piece is dropped. The final engine never gets an interim call.
    - **Preflight:** after 0.15 s of silence in the piece, the piece so far is transcribed and sent as a preflight
      transcript. LiveKit starts the reply from it (preemptive generation, also its audio). When speech comes back,
      the preflight is dropped.
    - Speech end (Silero: 0.55 s of silence): the final transcript. When the preflight's pause ended the piece, the
      final is the preflight text (no second call), so LiveKit keeps the early reply.
+   - **Polish** (decision 0013): each final transcript also goes to `/v1/polish` in the background, with the agent's
+     last reply as context. The answer goes out as the event `polished` (`heard`, `text`, `applied`, `reason`, `ms`);
+     the call page swaps the caption that still shows `heard`. The agent keeps the transcript. Off with
+     `ORB_VOICE_POLISH=verbatim`; a failed call is only logged.
 4. **Decide the end of the turn** (LiveKit): the turn detector reads the audio of the turn. Likely finished: commit
    after `min_delay` (0.3 s) from the end of speech; unlikely: wait up to `max_delay` (2.5 s) for more speech.
 5. **Reply** (`OrbLLM`): send only the person's words since the agent last spoke, `channel="voice"`, to
@@ -63,8 +69,11 @@ The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a
 | Silero min speech / min silence / prefix | 0.05 / 0.55 / 0.5 s | `ORB_VAD_MIN_SPEECH_S`, `_MIN_SILENCE_S`, `_PREFIX_S` | plugin defaults |
 | Endpointing min / max delay | 0.3 / 2.5 s | `ORB_MIN_ENDPOINTING_S`, `ORB_MAX_ENDPOINTING_S` | LiveKit defaults with the audio turn detector |
 | Interruption | 0.5 s and 2 words; resume after 2.0 s | `ORB_MIN_INTERRUPTION_S`, `_WORDS` | chosen: "Sure." is 1 word |
+| STT vocabulary | comma-separated terms, sent on every call; empty sends none | `ORB_STT_VOCABULARY` | chosen; the speech service checks the limits (decision 0011) |
+| Polish strength | empty: the speech service's `ORB_POLISH_STRENGTH` (medium) | `ORB_VOICE_POLISH` | decision 0013; `verbatim` sends no call |
+| Interim engine | `whistle` | `ORB_VOICE_STT_INTERIM_ENGINE` | measured: Parakeet interims cost 11–20× the final's GPU work and delay the final up to 230 ms; Whistle's leave it unchanged (decision 0012) |
 | Interim transcript | every 0.3 s of speech | `ORB_INTERIM_EVERY_S` | measured: 0.2 s did not stop barge-in sooner (0.95 s) |
-| Interim transcript, cloud STT | every 1.0 s of speech | `ORB_CLOUD_INTERIM_EVERY_S` | each call pays for the whole piece again: for 5 s of speech, 17.5 s of billed audio instead of 47 s (orb-speech LLD) |
+| Interim transcript, cloud interim engine | every 1.0 s of speech | `ORB_CLOUD_INTERIM_EVERY_S` | each call pays for the whole piece again: for 5 s of speech, 17.5 s of billed audio instead of 47 s (orb-speech LLD) |
 | Preflight | after 0.15 s of silence; 0 is off | `ORB_PREFLIGHT_S` | measured: p50 2.20 → 1.73 s with the TTS rules |
 | Preemptive replies per user turn | at most 3; only for turns under 10 s | LiveKit defaults | each one costs a Jev read |
 | First TTS piece | sentence ≥ 20, clause ≥ 30, word cut ≤ 60 characters | `ORB_FIRST_CLAUSE_CHARS`, `ORB_FIRST_PIECE_MAX_CHARS` | Kokoro: ~5.5 ms per character before its first audio |
@@ -81,11 +90,13 @@ The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a
 | Which STT engines are cloud | the set and the default from the speech service; an older service, bad JSON and a service that is down all mean "local" | `test_the_worker_learns_which_stt_engines_are_cloud_services` |
 | LiveKit credentials | the dev key or a short secret only with a server on this machine | `test_dev_credentials_only_on_this_machine` |
 | STT request | PCM16, rate, language, engine; the service's error message on failure | `test_stt_sends_*`, `test_stt_errors_carry_the_service_message` |
+| STT vocabulary | `ORB_STT_VOCABULARY` goes in the `X-Orb-Vocabulary` header of every call of the session (so interim, preflight and final texts are corrected alike); none when it is empty | `test_stt_sends_the_session_vocabulary_on_every_call` |
 | TTS request | engine, voice, style and language passed; 24 kHz only | `test_tts_sends_*`, `test_tts_refuses_another_sample_rate` |
 | Turn text | the person's words since the agent spoke, joined | `test_turn_text_joins_the_words_since_the_agent_spoke` |
 | LLM stream | tokens out, events forwarded, `replace_last` false, true, false | `test_llm_streams_tokens_forwards_events_and_undoes_unheard_turns` |
 | LLM failure | an error, and exactly one HTTP call | `test_llm_failures_are_reported_and_never_retried` |
 | Interim words | they grow while the person speaks; one final at the end | `test_live_stt_sends_growing_interim_words_then_one_final` |
+| Two engines | interim words from the interim engine; preflight and final from the final engine, which hears the piece once | `test_interim_words_come_from_the_interim_engine_and_the_final_from_the_final_engine` |
 | Preflight | sent at the pause; the final has the same text and needs no second STT call | `test_a_preflight_at_a_pause_becomes_the_final` |
 | Preflight, then more speech | the final hears the whole piece | `test_a_preflight_is_dropped_when_the_person_goes_on` |
 | Preflight off | no preflight event | `test_no_preflight_when_it_is_off` |

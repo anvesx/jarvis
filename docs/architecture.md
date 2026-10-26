@@ -50,7 +50,9 @@ browser ── POST /v1/sessions/{id}/turns {"text"} ──▶ agent service
 ```
 browser mic (echo cancellation, noise suppression) ─▶ LiveKit (:7880) ─▶ voice worker (apps/voice-agent)
    Silero VAD (LiveKit plugin): speech starts above 0.5; a piece ends after 0.55 s of silence
-   the speech service (Whistle) transcribes the piece every 0.3 s while the person speaks (interim words)
+   Whistle transcribes the piece every 0.3 s while the person speaks (interim words; decision 0012)
+   Parakeet writes the preflight and the final: it hears each piece once (a Hinglish session picks Qwen3-ASR; 0014)
+   after the final, off the turn path: the guarded LLM polish (qwen2.5:1.5b) rewrites the caption (decision 0013)
    0.15 s into a pause: a preflight transcript ─▶ the reply starts early (preemptive, with its audio)
    LiveKit's turn detector (v1-mini, local) hears whether the person finished:
       finished: commit 0.3 s after the speech · not finished: hold up to 2.5 s; the early reply is dropped

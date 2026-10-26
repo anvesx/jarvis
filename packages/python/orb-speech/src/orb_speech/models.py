@@ -55,6 +55,19 @@ PARAKEET_FILES = {  # name: (SHA-256, size)
     "tokenizer.json": ("bd321b096832a3f270bd3b2a88823957920f1a5c5ada71114a26ea729d0cbe91", 1159960),
     "tokenizer_config.json": ("0b2fe0037599ee335f0b972fa682bf0ece74e4ccfec755cb7daa3405d3d3e874", 290),
 }
+QWEN3_REPO = "mlx-community/Qwen3-ASR-1.7B-bf16"  # Apache-2.0 (Qwen/Qwen3-ASR-1.7B); decision 0014
+QWEN3_REVISION = "e1f6c266914abc5a46e8756e02580f834a6cf8a7"
+QWEN3_FILES = {  # name: (SHA-256, size)
+    "chat_template.json": ("75a8cfca24f00de72d796fbfed6858fc9614ef3dabd8696684cc3bc03a9c58ff", 1161),
+    "config.json": ("62fe9a2ba2de536820229e126fdfb35f9910b9a337dc46d3737c3b1ac0a9caa9", 6983),
+    "generation_config.json": ("1da527824d81e07118facff437e03f2e24a23311e3bdeb2368973fe77e5f275c", 142),
+    "merges.txt": ("8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5", 1671853),
+    "model.safetensors": ("2f080a3b769ae469aeaaa2dcb9e13a94141e54c9e6d5a7aa63392e0dc5a51789", 4076186653),
+    "model.safetensors.index.json": ("a3ee6037ec82e95dc8577216ac84cf0b3c92cfefc099cf20b2296571f2fb3fc0", 51384),
+    "preprocessor_config.json": ("45e120a4eda2c20c5d7f2ea9354e63536bf35e27aa573fb7cdf78017b378770d", 330),
+    "tokenizer_config.json": ("4942d005604266809309cabc9f4e9cb89ce855d59b14681fdc0e1cc62ea26c4c", 12487),
+    "vocab.json": ("ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910", 2776833),
+}
 # The speech LMs for text to speech (tts_lm.py), 4-bit MLX builds. Both are Llama 3.2 3B fine-tunes: the Llama 3.2
 # Community License applies too. Both write SNAC codes.
 MAYA1_REPO = "0xhb/maya1-mlx-4bit"  # Apache-2.0 (maya-research/maya1)
@@ -162,6 +175,10 @@ def parakeet_dir(fetch_missing: bool = True) -> Path:
     return hf_dir(PARAKEET_REPO, PARAKEET_REVISION, PARAKEET_FILES, fetch_missing)
 
 
+def qwen3_dir(fetch_missing: bool = True) -> Path:
+    return hf_dir(QWEN3_REPO, QWEN3_REVISION, QWEN3_FILES, fetch_missing)
+
+
 def maya1_dir(fetch_missing: bool = True) -> Path:
     return hf_dir(MAYA1_REPO, MAYA1_REVISION, MAYA1_FILES, fetch_missing)
 
@@ -178,7 +195,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true", help="only check the files that are there")
     ap.add_argument("--all", action="store_true",
-                    help="also the full-size Kokoro model (325 MB) and the maya1 and indic-speak TTS (4.3 GB)")
+                    help="also the full-size Kokoro model (325 MB), Qwen3-ASR for Hinglish (4.1 GB) and the maya1 "
+                         "and indic-speak TTS (4.3 GB)")
     args = ap.parse_args()
     names = list(FILES) if args.all else list(REQUIRED)
     ok = True
@@ -191,7 +209,7 @@ def main():
             print(f"FAILED  {name}: {e}")
     folders = [(PARAKEET_REPO, parakeet_dir, "CC-BY-4.0")]
     if args.all:
-        folders += [(MAYA1_REPO, maya1_dir, "Apache-2.0 + Llama 3.2"),
+        folders += [(QWEN3_REPO, qwen3_dir, "Apache-2.0"), (MAYA1_REPO, maya1_dir, "Apache-2.0 + Llama 3.2"),
                     (INDIC_REPO, indic_speak_dir, "Indic Open Model License + Llama 3.2"), (SNAC_REPO, snac_dir, "MIT")]
     for repo, folder_of, license_ in folders:
         try:

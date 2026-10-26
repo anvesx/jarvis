@@ -162,12 +162,15 @@ unit_tests() {
 }
 
 c_ollama() {
-  curl -sf -m 5 http://127.0.0.1:11434/api/tags | ORB_LLM_MODEL="$(setting ORB_LLM_MODEL)" "$PY" -I -c '
+  curl -sf -m 5 http://127.0.0.1:11434/api/tags | ORB_LLM_MODEL="$(setting ORB_LLM_MODEL)" \
+    ORB_POLISH_MODEL="$(setting ORB_POLISH_MODEL)" "$PY" -I -c '
 import json, os, sys
 names = [m["name"] for m in json.load(sys.stdin)["models"]]
 want = os.environ.get("ORB_LLM_MODEL") or "gemma4:e2b"
+polish = os.environ.get("ORB_POLISH_MODEL") or "qwen2.5:1.5b"
 assert want in names, f"the LLM {want} is not installed; installed: {names}"
-print(f"Ollama answers, and the LLM {want} is installed")
+assert polish in names, f"the polish LLM {polish} is not installed (ollama pull {polish}); installed: {names}"
+print(f"Ollama answers, and the LLM {want} and the polish LLM {polish} are installed")
 '
 }
 

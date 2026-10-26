@@ -25,8 +25,8 @@ with a measurable exit check. A later iteration builds on the parts of the earli
 ## Iteration 0.5 · Voice on LiveKit Agents, and the bench (done, 2026-10-22)
 - The voice worker is Python on LiveKit Agents, with LiveKit's Silero plugin and its local turn detector; the Go
   worker, the Go SDK copy and Smart Turn are removed (decision 0006).
-- Each session can choose its STT, LLM and TTS. Whistle is the default STT; Kokoro stays the voice; maya1 and
-  indic-speak are bench engines (decision 0007).
+- Each session can choose its STT, LLM and TTS. Parakeet writes the final text and Whistle the interim words
+  (decision 0012); Kokoro stays the voice; maya1 and indic-speak are bench engines (decision 0007).
 - orb-bench: git-ignored test audio (594 STT clips, noise, echo) and four scored suites. The bench tools and the chat
   are tabs of one page, with one model bar that chooses the models of a chat (STT, LLM, TTS, voice).
 - Cartesia as an optional cloud STT choice (decision 0008).

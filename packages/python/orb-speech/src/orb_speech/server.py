@@ -1,10 +1,16 @@
 """The speech service: the voice worker's STT and TTS, plus the bench, on 127.0.0.1 only.
 
     python -m orb_speech.server            # port 8200, or ORB_SPEECH_PORT
-    ORB_STT_ENGINE=parakeet python -m orb_speech.server  # another default STT; any engine can still be asked for
+    ORB_STT_ENGINE=whistle python -m orb_speech.server   # another default STT; any engine can still be asked for
+    ORB_STT_FORMAT=raw python -m orb_speech.server       # the default of format=: written (default) or raw
+    ORB_STT_VOCABULARY_FILE=team.txt python -m orb_speech.server  # the team's terms, one per line
+    ORB_POLISH_MODEL=qwen2.5:1.5b python -m orb_speech.server       # the LLM of /v1/polish (through Ollama, OLLAMA_URL)
 
-POST /v1/stt?sample_rate=16000[&language=en][&engine=whistle|parakeet]
-                                             body: PCM16 mono  ->  {"text", "language", "engine", "ms", "audio_ms"}
+POST /v1/stt?sample_rate=16000[&language=en][&engine=whistle|parakeet][&format=written|raw][&vocab=on|off]
+               header X-Orb-Vocabulary: the request's own terms, comma separated
+                                             body: PCM16 mono  ->  {"text", "raw", "stages", "language", "engine", "ms", "audio_ms"}
+POST /v1/polish {"text", "context"?, "strength"?: verbatim|light|medium}, header X-Orb-Vocabulary as for /v1/stt
+                                             ->  {"text", "applied", "reason", "ms", "model"} (the guarded LLM polish)
 POST /v1/tts   {"text", "engine"?: kokoro|maya1|indic-speak, "voice"?, "speed"?, "style"?, "lang"?}
                                              ->  a stream of PCM16 mono at the engine's rate (header X-Sample-Rate)
 GET  /v1/engines                             ->  the STT and TTS engines, which are loaded, and the voices
@@ -25,12 +31,22 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.requests import ClientDisconnect
 from pydantic import BaseModel, Field
 
-from orb_speech import audio
+from orb_speech import audio, polish, vocab
 from orb_speech.engines import EngineError, Registry
+from orb_speech.textfmt import written
 
 log = logging.getLogger("orb.speech")
 STT_MAX_SECONDS = 60
+STT_FORMATS = ("written", "raw")
+VOCAB_SWITCH = ("on", "off")
+VOCAB_HEADER = "X-Orb-Vocabulary"
 CHUNK_BYTES = 4800  # 100 ms of 24 kHz PCM16
+
+
+class PolishRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    context: str = Field(default="", max_length=4000)  # the agent's last reply; the last 500 chars are used
+    strength: str | None = Field(default=None, max_length=16)
 
 
 class SpeakRequest(BaseModel):
@@ -83,9 +99,35 @@ async def engine_of(reg: Registry, name: str | None, kind: str):
         raise HTTPException(503, f"{kind} engine {name} did not load: {e}")
 
 
-def create_app(stt=None, tts=None) -> FastAPI:
-    """The app with the given engines: a Registry, one engine, or None. A missing kind gives 503 on its endpoint."""
+def check_format(value: str | None, default: str = "written") -> str:
+    """The STT output format of a request: written (the default) or raw. A bad value is a 400 with the choices."""
+    fmt = default if value is None or value == "" else value
+    if fmt not in STT_FORMATS:
+        raise ValueError(f"format must be one of {', '.join(STT_FORMATS)}, not {fmt!r}.")
+    return fmt
+
+
+def check_vocab(value: str | None) -> bool:
+    """The `vocab` switch of a request: on (the default) or off."""
+    if value in (None, "", "on"):
+        return True
+    if value == "off":
+        return False
+    raise ValueError(f"vocab must be one of {', '.join(VOCAB_SWITCH)}, not {value!r}.")
+
+
+def create_app(stt=None, tts=None, stt_format: str = "written", vocabulary: tuple[str, ...] = (),
+               polisher: polish.Polisher | None = None, strength: str = "medium") -> FastAPI:
+    """The app with the given engines: a Registry, one engine, or None. A missing kind gives 503 on its endpoint.
+
+    `stt_format` is the default of `format` for /v1/stt (setting ORB_STT_FORMAT). `vocabulary` is the team's term list
+    (setting ORB_STT_VOCABULARY_FILE); a request adds its own terms in the X-Orb-Vocabulary header. `polisher` serves
+    /v1/polish, and `strength` is the default of its `strength` (setting ORB_POLISH_STRENGTH).
+    """
     stt, tts = as_registry(stt), as_registry(tts)
+    stt_format = check_format(stt_format)
+    vocabulary = vocab.check_terms(vocabulary, "vocabulary file")
+    strength = polish.check_strength(strength)
     app = FastAPI(title="orb speech", docs_url=None, redoc_url=None)
 
     def describe(reg: Registry | None) -> dict | None:
@@ -113,20 +155,52 @@ def create_app(stt=None, tts=None) -> FastAPI:
 
     @app.post("/v1/stt")
     async def transcribe(request: Request, sample_rate: int = Query(16000), language: str | None = Query(None),
-                         engine: str | None = Query(None, max_length=32)):
+                         engine: str | None = Query(None, max_length=32),
+                         fmt: str | None = Query(None, alias="format", max_length=16),
+                         vocab_switch: str | None = Query(None, alias="vocab", max_length=8)):
         if stt is None:
             raise HTTPException(503, "Speech-to-text is not loaded.")
+        try:
+            fmt = check_format(fmt, stt_format)
+            terms = vocab.merge(vocabulary, vocab.parse_header(request.headers.get(VOCAB_HEADER))) \
+                if check_vocab(vocab_switch) else ()
+        except ValueError as e:  # also a VocabularyError: checked before the body is read and before any model call
+            raise HTTPException(400, str(e))
         samples = await read_pcm(request, sample_rate, STT_MAX_SECONDS, 16000)
         model = await engine_of(stt, engine, "STT")
+        args = {"keywords": terms} if terms and getattr(model, "takes_keywords", False) else {}
         try:
-            out = await asyncio.to_thread(model.transcribe, samples, language)
+            out = await asyncio.to_thread(model.transcribe, samples, language, **args)
         except ValueError as e:
             raise HTTPException(400, str(e))
         except EngineError as e:  # an engine that works through another service: it is not reachable, or it refused
             raise HTTPException(502, str(e))
         name = stt.resolve(engine)
-        log.info("stt %s %d ms audio -> %d chars in %.1f ms", name, out["audio_ms"], len(out["text"]), out["ms"])
-        return {**out, "engine": name}
+        raw, stages = out["text"], {"asr": out["ms"]}  # the engine's time includes clean()
+        text = raw
+        if terms:
+            t0 = time.perf_counter()
+            text = vocab.correct(text, terms)
+            stages["vocab"] = round((time.perf_counter() - t0) * 1000, 3)
+        if fmt == "written":
+            t0 = time.perf_counter()
+            text = written(text)
+            stages["written"] = round((time.perf_counter() - t0) * 1000, 3)
+        log.info("stt %s %d ms audio -> %d chars (%s, %d terms) in %.1f ms", name, out["audio_ms"], len(text), fmt,
+                 len(terms), out["ms"])
+        return {**out, "text": text, "raw": raw, "stages": stages, "engine": name}
+
+    @app.post("/v1/polish")
+    async def polish_text(request: Request, req: PolishRequest):
+        if polisher is None:
+            raise HTTPException(503, "The polish model is not set up.")
+        try:
+            level = polish.check_strength(req.strength, strength)
+            terms = vocab.merge(vocabulary, vocab.parse_header(request.headers.get(VOCAB_HEADER)))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        out = await asyncio.to_thread(polisher.polish, req.text, terms, req.context, level)
+        return {"text": out.text, "applied": out.applied, "reason": out.reason, "ms": out.ms, "model": polisher.model}
 
     @app.post("/v1/tts")
     async def speak(req: SpeakRequest):
@@ -162,14 +236,16 @@ def create_app(stt=None, tts=None) -> FastAPI:
     return app
 
 
-STT_ENGINES = ("whistle", "parakeet", "cartesia")
+STT_ENGINES = ("whistle", "parakeet", "qwen3", "cartesia")
 CARTESIA_NO_KEY = ("CARTESIA_API_KEY is not set. Add the line CARTESIA_API_KEY=... to the .env file of the repo "
                    "(it is not in git), then restart the speech service.")
 TTS_ENGINES = ("kokoro", "maya1", "indic-speak")
+POLISH_MODEL = "qwen2.5:1.5b"  # chosen by the STT-4 bench (decision 0013)
 
 
 def make_stt(engine: str, language: str | None):
-    """A speech-to-text engine: whistle (the default), parakeet (decision 0005) or cartesia (a cloud service)."""
+    """A speech-to-text engine: parakeet (the default, decisions 0005 and 0012), whistle (the voice worker's
+    interim words), qwen3 (Hinglish and Hindi, decision 0014) or cartesia (a cloud service)."""
     from orb_speech import models
 
     if engine not in STT_ENGINES:
@@ -183,12 +259,15 @@ def make_stt(engine: str, language: str | None):
         if not key:
             raise RuntimeError(CARTESIA_NO_KEY)
         return CartesiaSTT(key, language=language, version=os.environ.get("ORB_CARTESIA_VERSION") or CARTESIA_VERSION)
+    if engine == "qwen3":
+        from orb_speech.stt import Qwen3STT
+        return Qwen3STT(models.qwen3_dir(fetch_missing=False), language=language)
     from orb_speech.stt import ParakeetSTT
     return ParakeetSTT(models.parakeet_dir(fetch_missing=False), language=language)
 
 
 def build() -> FastAPI:
-    """The registries, with the default engines loaded now (Whistle and Kokoro: about 2 s on an Apple M5)."""
+    """The registries, with the default engines loaded now (Parakeet and Kokoro)."""
     from orb_speech import models
     from orb_speech.tts import LANGS as tts_langs, KokoroTTS
     from orb_speech.tts_lm import IndicSpeakTTS, Maya1TTS  # numpy only; MLX loads with an engine
@@ -199,7 +278,7 @@ def build() -> FastAPI:
     if not os.environ.get("CARTESIA_API_KEY", "").strip():
         stt_meta["cartesia"]["unavailable"] = CARTESIA_NO_KEY
     stt = Registry({name: (lambda n=name: make_stt(n, language)) for name in STT_ENGINES},
-                   os.environ.get("ORB_STT_ENGINE", "whistle"), heavy=frozenset({"parakeet"}), meta=stt_meta)
+                   os.environ.get("ORB_STT_ENGINE", "parakeet"), heavy=frozenset({"parakeet", "qwen3"}), meta=stt_meta)
     kokoro = lambda: KokoroTTS(models.path(os.environ.get("ORB_TTS_MODEL", "kokoro-v1.0.int8.onnx"), verify=True),
                                models.path("voices-v1.0.bin", verify=True),
                                voice=os.environ.get("ORB_TTS_VOICE", "af_heart"))
@@ -210,9 +289,18 @@ def build() -> FastAPI:
             "indic-speak": {"voices": IndicSpeakTTS.voices, "styles": IndicSpeakTTS.styles, "langs": IndicSpeakTTS.langs}}
     tts = Registry({"kokoro": kokoro, "maya1": maya1, "indic-speak": indic_speak},
                    os.environ.get("ORB_TTS_ENGINE", "kokoro"), heavy=frozenset({"maya1", "indic-speak"}), meta=meta)
+    stt_format = check_format(os.environ.get("ORB_STT_FORMAT"))  # a bad value stops the start, not the first call
+    vocab_file = os.environ.get("ORB_STT_VOCABULARY_FILE", "").strip()
+    vocabulary = vocab.load_file(vocab_file) if vocab_file else ()  # a missing or bad file stops the start too
+    strength = polish.check_strength(os.environ.get("ORB_POLISH_STRENGTH"))
+    polisher = polish.Polisher(os.environ.get("ORB_POLISH_MODEL", POLISH_MODEL),
+                               os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
     stt.get(), tts.get()  # the defaults load now, so the first call is fast
-    log.info("models loaded in %.1f s (stt %s, tts %s)", time.perf_counter() - t0, stt.default, tts.default)
-    return create_app(stt, tts)
+    if strength != "verbatim":
+        polisher.warm()
+    log.info("models loaded in %.1f s (stt %s, tts %s, format %s, %d vocabulary terms, polish %s %s)",
+             time.perf_counter() - t0, stt.default, tts.default, stt_format, len(vocabulary), polisher.model, strength)
+    return create_app(stt, tts, stt_format, vocabulary, polisher, strength)
 
 
 def main():

@@ -1,0 +1,978 @@
+[
+ {
+  "id": "s01",
+  "ref": "Please review pull request #4821 before the standup.",
+  "hyp": "Please review Pool Request No. 4821 before the stand-up.",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "Please review Pool Request No. 4821 before the stand-up."
+ },
+ {
+  "id": "s01",
+  "ref": "Please review pull request #4821 before the standup.",
+  "hyp": "Please review pool request number 4821 before the stand up.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "Please review pool request #4821 before the stand up."
+ },
+ {
+  "id": "s01",
+  "ref": "Please review pull request #4821 before the standup.",
+  "hyp": "Please review pool request number 4821 before the stand-up.",
+  "engines": [
+   "moonshine-base"
+  ],
+  "written": "Please review pool request #4821 before the stand-up."
+ },
+ {
+  "id": "s01",
+  "ref": "Please review pull request #4821 before the standup.",
+  "hyp": "Please review pull request number 4821 before the stand-up.",
+  "engines": [
+   "parakeet-v2",
+   "parakeet-v2bf16",
+   "wcpp-base.en-q5",
+   "wcpp-small.en-q5",
+   "wcpp-turbo-q5"
+  ],
+  "written": "Please review pull request #4821 before the stand-up."
+ },
+ {
+  "id": "s01",
+  "ref": "Please review pull request #4821 before the standup.",
+  "hyp": "Please review pull request number 4821 before the standoff.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "Please review pull request #4821 before the standoff."
+ },
+ {
+  "id": "s02",
+  "ref": "Please review pull request #4821 before the standup.",
+  "hyp": "Please review pull request number 4821 before the stand up.",
+  "engines": [
+   "wcpp-small.en-q5",
+   "wcpp-turbo-q5"
+  ],
+  "written": "Please review pull request #4821 before the stand up."
+ },
+ {
+  "id": "s02",
+  "ref": "Please review pull request #4821 before the standup.",
+  "hyp": "Please review pull request number 4821 before the stand-up.",
+  "engines": [
+   "apple-speech",
+   "moonshine-base",
+   "moonshine-tiny",
+   "parakeet-v2",
+   "parakeet-v2bf16",
+   "wcpp-base.en-q5"
+  ],
+  "written": "Please review pull request #4821 before the stand-up."
+ },
+ {
+  "id": "s02",
+  "ref": "Please review pull request #4821 before the standup.",
+  "hyp": "Please review pull request number four thousand eight hundred and twenty-one before the stand-up.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "Please review pull request #4821 before the stand-up."
+ },
+ {
+  "id": "s03",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside Use Effect and add User Eye to the dependency array.",
+  "engines": [
+   "moonshine-base"
+  ],
+  "written": "In the component, wrap the fetch call inside Use Effect and add User Eye to the dependency array."
+ },
+ {
+  "id": "s03",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside Use effect and add user id to the dependency array.",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "In the component, wrap the fetch call inside Use effect and add user id to the dependency array."
+ },
+ {
+  "id": "s03",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside use effect and add user eye to the dependency array.",
+  "engines": [
+   "apple-speech",
+   "moonshine-tiny"
+  ],
+  "written": "In the component, wrap the fetch call inside use effect and add user eye to the dependency array."
+ },
+ {
+  "id": "s03",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside use effect and add userI to the dependency array.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "In the component, wrap the fetch call inside use effect and add userI to the dependency array."
+ },
+ {
+  "id": "s03",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside useEffect and add user ID to the dependency array.",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "In the component, wrap the fetch call inside useEffect and add user ID to the dependency array."
+ },
+ {
+  "id": "s03",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside useEffect and add userI to the dependency array.",
+  "engines": [
+   "parakeet-v2",
+   "parakeet-v2bf16",
+   "wcpp-turbo-q5"
+  ],
+  "written": "In the component, wrap the fetch call inside useEffect and add userI to the dependency array."
+ },
+ {
+  "id": "s04",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the FET call inside UC FECT and add UCERID to the Dependency array.",
+  "engines": [
+   "moonshine-base"
+  ],
+  "written": "In the component, wrap the FET call inside UC FECT and add UCERID to the Dependency array."
+ },
+ {
+  "id": "s04",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside UC-FECT and add UC-RIT to the dependency array.",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "In the component, wrap the fetch call inside UC-FECT and add UC-RIT to the dependency array."
+ },
+ {
+  "id": "s04",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside UCFECT and add USERID to the dependency array.",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "In the component, wrap the fetch call inside UCFECT and add USERID to the dependency array."
+ },
+ {
+  "id": "s04",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside ucefect and add ucerid to the dependency array.",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "In the component, wrap the fetch call inside ucefect and add ucerid to the dependency array."
+ },
+ {
+  "id": "s04",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside ucfect and add uCerid to the dependency array.",
+  "engines": [
+   "parakeet-v2",
+   "parakeet-v2bf16"
+  ],
+  "written": "In the component, wrap the fetch call inside ucfect and add uCerid to the dependency array."
+ },
+ {
+  "id": "s04",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside use effect and add userid to the dependency array.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "In the component, wrap the fetch call inside use effect and add userid to the dependency array."
+ },
+ {
+  "id": "s04",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside useEffect and add useErid to the dependency array.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "In the component, wrap the fetch call inside useEffect and add useErid to the dependency array."
+ },
+ {
+  "id": "s04",
+  "ref": "In the component, wrap the fetch call inside useEffect and add userId to the dependency array.",
+  "hyp": "In the component, wrap the fetch call inside, UC effect, and add you said it to the dependency array.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "In the component, wrap the fetch call inside, UC effect, and add you said it to the dependency array."
+ },
+ {
+  "id": "s05",
+  "ref": "We are migrating the staging cluster to Kubernetes and Terraform next week.",
+  "hyp": "We are migrating the staging cluster to Kubernetes and to Kuba to Kubernetes and Terraform next week.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "We are migrating the staging cluster to Kubernetes and to Kuba to Kubernetes and Terraform next week."
+ },
+ {
+  "id": "s05",
+  "ref": "We are migrating the staging cluster to Kubernetes and Terraform next week.",
+  "hyp": "We are migrating the staging cluster to Kubernetes and to Kuber to Kubernetes and Terraform\n next week.",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "We are migrating the staging cluster to Kubernetes and to Kuber to Kubernetes and Terraform\n next week."
+ },
+ {
+  "id": "s05",
+  "ref": "We are migrating the staging cluster to Kubernetes and Terraform next week.",
+  "hyp": "We are migrating the staging cluster to Kubernetes and to Kuber to Kubernetes and Terraform next\n week.",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "We are migrating the staging cluster to Kubernetes and to Kuber to Kubernetes and Terraform next\n week."
+ },
+ {
+  "id": "s05",
+  "ref": "We are migrating the staging cluster to Kubernetes and Terraform next week.",
+  "hyp": "We are migrating the staging cluster to Kubernetes and to Kuber to Kubernetes and Terraform next week.",
+  "engines": [
+   "parakeet-v2",
+   "parakeet-v2bf16"
+  ],
+  "written": "We are migrating the staging cluster to Kubernetes and to Kuber to Kubernetes and Terraform next week."
+ },
+ {
+  "id": "s05",
+  "ref": "We are migrating the staging cluster to Kubernetes and Terraform next week.",
+  "hyp": "We are migrating the staging cluster to Kubernetes and to Kubernetes and Terraform next week.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "We are migrating the staging cluster to Kubernetes and to Kubernetes and Terraform next week."
+ },
+ {
+  "id": "s05",
+  "ref": "We are migrating the staging cluster to Kubernetes and Terraform next week.",
+  "hyp": "We are migrating the staging cluster to Kubernetes and to Kubernetes and to Kubernetes and Terraform next week.",
+  "engines": [
+   "moonshine-base",
+   "moonshine-tiny"
+  ],
+  "written": "We are migrating the staging cluster to Kubernetes and to Kubernetes and to Kubernetes and Terraform next week."
+ },
+ {
+  "id": "s05",
+  "ref": "We are migrating the staging cluster to Kubernetes and Terraform next week.",
+  "hyp": "We are migrating the staging cluster to Kubernets and Takuba to Kubernets and Terraform next week.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "We are migrating the staging cluster to Kubernets and Takuba to Kubernets and Terraform next week."
+ },
+ {
+  "id": "s06",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send a report to preia.sharma at devxlabs.a by end of day.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "Send a report to preia.sharma at devxlabs.a by end of day."
+ },
+ {
+  "id": "s06",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to Prayaya. Sharma@devkslabs.ai by end of day.",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "Send the report to Prayaya. Sharma@devkslabs.ai by end of day."
+ },
+ {
+  "id": "s06",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to pre-ia.sharma at deckslab.ai by end of day",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "Send the report to pre-ia.sharma@deckslab.ai by end of day"
+ },
+ {
+  "id": "s06",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to priaya.sharma at devxlabs.ai by end of day.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "Send the report to priaya.sharma@devxlabs.ai by end of day."
+ },
+ {
+  "id": "s06",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to priya.sharma at defxlabs.ai by end of day.",
+  "engines": [
+   "moonshine-base"
+  ],
+  "written": "Send the report to priya.sharma@defxlabs.ai by end of day."
+ },
+ {
+  "id": "s06",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to priya.sharma at devxlabs.ai by end of day.",
+  "engines": [
+   "parakeet-v2",
+   "parakeet-v2bf16",
+   "wcpp-turbo-q5"
+  ],
+  "written": "Send the report to priya.sharma@devxlabs.ai by end of day."
+ },
+ {
+  "id": "s06",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "Send the report to priya.sharma@devxlabs.ai by end of day."
+ },
+ {
+  "id": "s07",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to pre-r.charmar at devxlabz.r.e by end of day",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "Send the report to pre-r.charmar at devxlabz.r.e by end of day"
+ },
+ {
+  "id": "s07",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to pre-r.sharmar@devkslabs.re/by-end of day.",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "Send the report to pre-r.sharmar@devkslabs.re/by-end of day."
+ },
+ {
+  "id": "s07",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to priya.shalmar at devslabs.e by end of day.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "Send the report to priya.shalmar at devslabs.e by end of day."
+ },
+ {
+  "id": "s07",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to priya.sharma@devxlabs.ie by end of day.",
+  "engines": [
+   "moonshine-base",
+   "wcpp-small.en-q5"
+  ],
+  "written": "Send the report to priya.sharma@devxlabs.ie by end of day."
+ },
+ {
+  "id": "s07",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to priya.sharmar at devslabs.ie by end of day.",
+  "engines": [
+   "parakeet-v2",
+   "parakeet-v2bf16",
+   "parakeet-v3bf16"
+  ],
+  "written": "Send the report to priya.sharmar@devslabs.ie by end of day."
+ },
+ {
+  "id": "s07",
+  "ref": "Send the report to priya.sharma@devxlabs.ai by end of day.",
+  "hyp": "Send the report to priya.sharmar at devxlabs.ie by end of day.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "Send the report to priya.sharmar@devxlabs.ie by end of day."
+ },
+ {
+  "id": "s08",
+  "ref": "The invoice total is $12,450.30, due on March 3rd.",
+  "hyp": "The invoice total is $12,450.30 due on March third.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "The invoice total is $12,450.30 due on March 3rd."
+ },
+ {
+  "id": "s08",
+  "ref": "The invoice total is $12,450.30, due on March 3rd.",
+  "hyp": "The invoice total is $12,450.30, due on March 3.",
+  "engines": [
+   "moonshine-base",
+   "parakeet-v2",
+   "parakeet-v2bf16",
+   "wcpp-small.en-q5"
+  ],
+  "written": "The invoice total is $12,450.30, due on March 3."
+ },
+ {
+  "id": "s08",
+  "ref": "The invoice total is $12,450.30, due on March 3rd.",
+  "hyp": "The invoice total is $12,450.30, due on March 3rd, 2021.",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "The invoice total is $12,450.30, due on March 3rd, 2021."
+ },
+ {
+  "id": "s08",
+  "ref": "The invoice total is $12,450.30, due on March 3rd.",
+  "hyp": "The invoice total is $12,450.30, due on March 3rd.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "The invoice total is $12,450.30, due on March 3rd."
+ },
+ {
+  "id": "s08",
+  "ref": "The invoice total is $12,450.30, due on March 3rd.",
+  "hyp": "The invoice total is $12,450.30.\n Do on March 3.",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "The invoice total is $12,450.30.\n Do on March 3."
+ },
+ {
+  "id": "s08",
+  "ref": "The invoice total is $12,450.30, due on March 3rd.",
+  "hyp": "The invoice total is $12,450.30.\n Due on March 3rd.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "The invoice total is $12,450.30.\n Due on March 3rd."
+ },
+ {
+  "id": "s09",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday, no wait, Wednesday at 3 30 pm.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "Book the meeting for Tuesday, no wait, Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s09",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday, no wait, Wednesday at 3.30 p.m.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "Book the meeting for Tuesday, no wait, Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s09",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday, no wait, Wednesday at 3.30 pm.",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "Book the meeting for Tuesday, no wait, Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s09",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday, no wait, Wednesday at 3.30pm.",
+  "engines": [
+   "moonshine-base",
+   "moonshine-tiny",
+   "parakeet-v2",
+   "parakeet-v2bf16",
+   "wcpp-base.en-q5"
+  ],
+  "written": "Book the meeting for Tuesday, no wait, Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s09",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday, no wait. Wednesday at 330 p.m.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "Book the meeting for Tuesday, no wait. Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s10",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday, no wait, Wednesday at 3 30 p.m.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "Book the meeting for Tuesday, no wait, Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s10",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday, no wait, Wednesday at 3.30 p.m.",
+  "engines": [
+   "moonshine-tiny",
+   "parakeet-v2",
+   "parakeet-v2bf16"
+  ],
+  "written": "Book the meeting for Tuesday, no wait, Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s10",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday, no wait, Wednesday at 3.30pm.",
+  "engines": [
+   "moonshine-base",
+   "wcpp-small.en-q5"
+  ],
+  "written": "Book the meeting for Tuesday, no wait, Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s10",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday.\n No wait.\n Wednesday at 3.30 p.m.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "Book the meeting for Tuesday.\n No wait.\n Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s10",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday. No wait, Wednesday at 3.30pm.",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "Book the meeting for Tuesday. No wait, Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s10",
+  "ref": "Book the meeting for Wednesday at 3:30 PM.",
+  "hyp": "Book the meeting for Tuesday. No, wait. Wednesday at 330 p.m.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "Book the meeting for Tuesday. No, wait. Wednesday at 3:30 PM."
+ },
+ {
+  "id": "s11",
+  "ref": "Action items: 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "hyp": "1. Update the readme. 2. Fix the flaky test in CI.\n 3. Deploy to production.",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "1. Update the README. 2. Fix the flaky test in CI.\n 3. Deploy to production."
+ },
+ {
+  "id": "s11",
+  "ref": "Action items: 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "hyp": "Action items 1. Update the README 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "Action items 1. Update the README 2. Fix the flaky test in CI. 3. Deploy to production."
+ },
+ {
+  "id": "s11",
+  "ref": "Action items: 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "hyp": "Action items.\n 1.\n Update the Readme.\n 2.\n Fix the Flaky Test in CI.\n 3.\n Deploy to Production",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "Action items.\n 1.\n Update the README.\n 2.\n Fix the Flaky Test in CI.\n 3.\n Deploy to Production"
+ },
+ {
+  "id": "s11",
+  "ref": "Action items: 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "hyp": "Action items.\n 1. Update the readme.\n 2. Fix the flaky test in CI.\n 3. Deploy to production.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "Action items.\n 1. Update the README.\n 2. Fix the flaky test in CI.\n 3. Deploy to production."
+ },
+ {
+  "id": "s11",
+  "ref": "Action items: 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "hyp": "Action items. 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "engines": [
+   "parakeet-v2",
+   "parakeet-v2bf16"
+  ],
+  "written": "Action items. 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production."
+ },
+ {
+  "id": "s11",
+  "ref": "Action items: 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "hyp": "Action items. 1. Update the readme. 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "Action items. 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production."
+ },
+ {
+  "id": "s11",
+  "ref": "Action items: 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "hyp": "Action items. One, update the read me to fix the flaky test in CI. 3, deploy to production.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "Action items. One, update the read me to fix the flaky test in CI. 3, deploy to production."
+ },
+ {
+  "id": "s11",
+  "ref": "Action items: 1. Update the README. 2. Fix the flaky test in CI. 3. Deploy to production.",
+  "hyp": "Action items: 1. Update the readme: 2. Fix the flaky test in CI: 3. Deploy to production:",
+  "engines": [
+   "moonshine-base"
+  ],
+  "written": "Action items: 1. Update the README: 2. Fix the flaky test in CI: 3. Deploy to production:"
+ },
+ {
+  "id": "s12",
+  "ref": "Run git checkout -b feature/login-flow and then push to origin.",
+  "hyp": "Run get checkout dash b feature slash login dash flow and then push to origin",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "Run get checkout dash b feature slash login dash flow and then push to origin"
+ },
+ {
+  "id": "s12",
+  "ref": "Run git checkout -b feature/login-flow and then push to origin.",
+  "hyp": "Run git checkout -b feature /log and -flow and then push to origin.",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "Run git checkout -b feature /log and -flow and then push to origin."
+ },
+ {
+  "id": "s12",
+  "ref": "Run git checkout -b feature/login-flow and then push to origin.",
+  "hyp": "Run git checkout -b feature /login-flow and then push to origin.",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "Run git checkout -b feature /login-flow and then push to origin."
+ },
+ {
+  "id": "s12",
+  "ref": "Run git checkout -b feature/login-flow and then push to origin.",
+  "hyp": "Run git checkout dash b feature slash login dash flow and then push to origin.",
+  "engines": [
+   "moonshine-base",
+   "parakeet-v2",
+   "parakeet-v2bf16",
+   "parakeet-v3bf16"
+  ],
+  "written": "Run git checkout dash b feature slash login dash flow and then push to origin."
+ },
+ {
+  "id": "s12",
+  "ref": "Run git checkout -b feature/login-flow and then push to origin.",
+  "hyp": "Run git checkout-b feature slash login-flow and then push to origin.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "Run git checkout-b feature slash login-flow and then push to origin."
+ },
+ {
+  "id": "s12",
+  "ref": "Run git checkout -b feature/login-flow and then push to origin.",
+  "hyp": "Run, get, check out dash B features slash login dash flow, and then push to origin.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "Run, get, check out dash B features slash login dash flow, and then push to origin."
+ },
+ {
+  "id": "s13",
+  "ref": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the Redis cache went live.",
+  "hyp": "Hateem, quick update. The API latency dropped from 900 milliseconds to 200 after the Redis cache went live.",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "Hateem, quick update. The API latency dropped from 900 milliseconds to 200 after the Redis cache went live."
+ },
+ {
+  "id": "s13",
+  "ref": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the Redis cache went live.",
+  "hyp": "Hey team, quick update, the API latency dropped from 900 milliseconds to 200 after the REDE's cache went live.",
+  "engines": [
+   "parakeet-v2",
+   "parakeet-v2bf16"
+  ],
+  "written": "Hey team, quick update, the API latency dropped from 900 milliseconds to 200 after the REDE's cache went live."
+ },
+ {
+  "id": "s13",
+  "ref": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the Redis cache went live.",
+  "hyp": "Hey team, quick update, the API latency dropped from 900ms to 200ms after the Redis cache\n went live.",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "Hey team, quick update, the API latency dropped from 900ms to 200ms after the Redis cache\n went live."
+ },
+ {
+  "id": "s13",
+  "ref": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the Redis cache went live.",
+  "hyp": "Hey team, quick update.\n The API latency dropped from 900 milliseconds to 200\n after the readies cache went live.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "Hey team, quick update.\n The API latency dropped from 900 milliseconds to 200\n after the readies cache went live."
+ },
+ {
+  "id": "s13",
+  "ref": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the Redis cache went live.",
+  "hyp": "Hey team, quick update.\n The API latency dropped from 900ms to 200 after the Redease cache went live.",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "Hey team, quick update.\n The API latency dropped from 900ms to 200 after the Redease cache went live."
+ },
+ {
+  "id": "s13",
+  "ref": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the Redis cache went live.",
+  "hyp": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the ReD's cash went live.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the ReD's cash went live."
+ },
+ {
+  "id": "s13",
+  "ref": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the Redis cache went live.",
+  "hyp": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the Red's cache went live.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the Red's cache went live."
+ },
+ {
+  "id": "s13",
+  "ref": "Hey team, quick update. The API latency dropped from 900 milliseconds to 200 after the Redis cache went live.",
+  "hyp": "Hey team, quick update. The API latency dropped from 900ms to 200 after the ReD's cash went live.",
+  "engines": [
+   "moonshine-base"
+  ],
+  "written": "Hey team, quick update. The API latency dropped from 900ms to 200 after the ReD's cash went live."
+ },
+ {
+  "id": "s14",
+  "ref": "Can you ask Sanjay whether the Postgres migration finished, and also check the Datadog dashboard?",
+  "hyp": "Can you ask Sanjay whether the Postgres migration finished, and also check the Datadog dashboard?",
+  "engines": [
+   "parakeet-v2",
+   "parakeet-v2bf16"
+  ],
+  "written": "Can you ask Sanjay whether the Postgres migration finished, and also check the Datadog dashboard?"
+ },
+ {
+  "id": "s14",
+  "ref": "Can you ask Sanjay whether the Postgres migration finished, and also check the Datadog dashboard?",
+  "hyp": "Can you ask Sanjay whether the Postgres migration finished?\n And also check the DadaDock dashboard?",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "Can you ask Sanjay whether the Postgres migration finished?\n And also check the DadaDock dashboard?"
+ },
+ {
+  "id": "s14",
+  "ref": "Can you ask Sanjay whether the Postgres migration finished, and also check the Datadog dashboard?",
+  "hyp": "Can you ask Sanjay whether the Postgres migration finished?\n And also check the Datadog dashboard?",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "Can you ask Sanjay whether the Postgres migration finished?\n And also check the Datadog dashboard?"
+ },
+ {
+  "id": "s14",
+  "ref": "Can you ask Sanjay whether the Postgres migration finished, and also check the Datadog dashboard?",
+  "hyp": "Can you ask Sanjay whether the post-GERS migration finished?\n And also check the Datadog dashboard?",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "Can you ask Sanjay whether the post-GERS migration finished?\n And also check the Datadog dashboard?"
+ },
+ {
+  "id": "s14",
+  "ref": "Can you ask Sanjay whether the Postgres migration finished, and also check the Datadog dashboard?",
+  "hyp": "Can you ask Sanjay whether the poster's migration finished, and also check the datadog dashboard?",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "Can you ask Sanjay whether the poster's migration finished, and also check the datadog dashboard?"
+ },
+ {
+  "id": "s14",
+  "ref": "Can you ask Sanjay whether the Postgres migration finished, and also check the Datadog dashboard?",
+  "hyp": "Can you ask Sanjay whether the posters migration finished? And also check the Data Dog dashboard?",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "Can you ask Sanjay whether the posters migration finished? And also check the Data Dog dashboard?"
+ },
+ {
+  "id": "s14",
+  "ref": "Can you ask Sanjay whether the Postgres migration finished, and also check the Datadog dashboard?",
+  "hyp": "Can you ask Sanjay whether the postgir's migration finished, and also check the Datadog dashboard?",
+  "engines": [
+   "moonshine-base"
+  ],
+  "written": "Can you ask Sanjay whether the postgir's migration finished, and also check the Datadog dashboard?"
+ },
+ {
+  "id": "s14",
+  "ref": "Can you ask Sanjay whether the Postgres migration finished, and also check the Datadog dashboard?",
+  "hyp": "Can you ask Sanjay whether the postgirl's migration finished, and also check the Datadog dashboard?",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "Can you ask Sanjay whether the postgirl's migration finished, and also check the Datadog dashboard?"
+ },
+ {
+  "id": "s15",
+  "ref": "Let's sync on Friday, November 14th at 10 AM about the OAuth token expiry bug.",
+  "hyp": "Let's sink on Friday 14 November at 10 or M about the Earth/Token expiry bud",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "Let's sink on Friday 14 November at 10 or M about the Earth/Token expiry bud"
+ },
+ {
+  "id": "s15",
+  "ref": "Let's sync on Friday, November 14th at 10 AM about the OAuth token expiry bug.",
+  "hyp": "Let's sink on Friday the 14th of November at 10:00 am about the oath token expiry bud.",
+  "engines": [
+   "moonshine-base"
+  ],
+  "written": "Let's sink on Friday the 14th of November at 10:00 AM about the oath token expiry bud."
+ },
+ {
+  "id": "s15",
+  "ref": "Let's sync on Friday, November 14th at 10 AM about the OAuth token expiry bug.",
+  "hyp": "Let's sink on Friday the 14th of November at 10am about the Oath token expiry bud.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "Let's sink on Friday the 14th of November at 10 AM about the Oath token expiry bud."
+ },
+ {
+  "id": "s15",
+  "ref": "Let's sync on Friday, November 14th at 10 AM about the OAuth token expiry bug.",
+  "hyp": "Let's sync on Friday 14th of November at 10am about the OATH token expiry bud.",
+  "engines": [
+   "parakeet-v2",
+   "parakeet-v2bf16"
+  ],
+  "written": "Let's sync on Friday 14th of November at 10 AM about the OATH token expiry bud."
+ },
+ {
+  "id": "s15",
+  "ref": "Let's sync on Friday, November 14th at 10 AM about the OAuth token expiry bug.",
+  "hyp": "Let's sync on Friday 14th of November at 10am about the OAuth token expiry bud.",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "Let's sync on Friday 14th of November at 10 AM about the OAuth token expiry bud."
+ },
+ {
+  "id": "s15",
+  "ref": "Let's sync on Friday, November 14th at 10 AM about the OAuth token expiry bug.",
+  "hyp": "Let's sync on Friday the 14th of November at 10 RM about the oath token expiry bud.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "Let's sync on Friday the 14th of November at 10 RM about the oath token expiry bud."
+ },
+ {
+  "id": "s15",
+  "ref": "Let's sync on Friday, November 14th at 10 AM about the OAuth token expiry bug.",
+  "hyp": "Let's sync on Friday the 14th of November at 10:00 am about the oath token expiry bud",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "Let's sync on Friday the 14th of November at 10:00 AM about the oath token expiry bud"
+ },
+ {
+  "id": "s15",
+  "ref": "Let's sync on Friday, November 14th at 10 AM about the OAuth token expiry bug.",
+  "hyp": "Let's sync on Friday, the 14th of November at 10 or M about the oath token expiry bud.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "Let's sync on Friday, the 14th of November at 10 or M about the oath token expiry bud."
+ },
+ {
+  "id": "s16",
+  "ref": "I think we should rename the function to fetchUserProfile and add a TypeScript type for the response.",
+  "hyp": "I think we should rename the function to get user profile, actually make that fetch user profile, and add a TypeScript type for the response.",
+  "engines": [
+   "moonshine-base",
+   "parakeet-v2",
+   "parakeet-v2bf16"
+  ],
+  "written": "I think we should rename the function to get user profile, actually make that fetch user profile, and add a TypeScript type for the response."
+ },
+ {
+  "id": "s16",
+  "ref": "I think we should rename the function to fetchUserProfile and add a TypeScript type for the response.",
+  "hyp": "I think we should rename the function to get user profile, actually make that fetch user profile, and add a type script type for the response.",
+  "engines": [
+   "moonshine-tiny"
+  ],
+  "written": "I think we should rename the function to get user profile, actually make that fetch user profile, and add a type script type for the response."
+ },
+ {
+  "id": "s16",
+  "ref": "I think we should rename the function to fetchUserProfile and add a TypeScript type for the response.",
+  "hyp": "I think we should rename the function to get user profile.\n Actually make that fetch user profile.\n And add a type script type for the response.",
+  "engines": [
+   "wcpp-turbo-q5"
+  ],
+  "written": "I think we should rename the function to get user profile.\n Actually make that fetch user profile.\n And add a type script type for the response."
+ },
+ {
+  "id": "s16",
+  "ref": "I think we should rename the function to fetchUserProfile and add a TypeScript type for the response.",
+  "hyp": "I think we should rename the function to get user profile. Actually make that fetch user profile, and add a type script type for the response.",
+  "engines": [
+   "apple-speech"
+  ],
+  "written": "I think we should rename the function to get user profile. Actually make that fetch user profile, and add a type script type for the response."
+ },
+ {
+  "id": "s16",
+  "ref": "I think we should rename the function to fetchUserProfile and add a TypeScript type for the response.",
+  "hyp": "I think we should rename the function to getUserProfile,\n actually make that fetchUserProfile,\n and add a type ScriptType for the response.",
+  "engines": [
+   "wcpp-small.en-q5"
+  ],
+  "written": "I think we should rename the function to getUserProfile,\n actually make that fetchUserProfile,\n and add a type ScriptType for the response."
+ },
+ {
+  "id": "s16",
+  "ref": "I think we should rename the function to fetchUserProfile and add a TypeScript type for the response.",
+  "hyp": "I think we should rename the function to getUserProfile, actually make that fetchUserProfile,\n and add a TypeScript type for the response.",
+  "engines": [
+   "wcpp-base.en-q5"
+  ],
+  "written": "I think we should rename the function to getUserProfile, actually make that fetchUserProfile,\n and add a TypeScript type for the response."
+ },
+ {
+  "id": "s16",
+  "ref": "I think we should rename the function to fetchUserProfile and add a TypeScript type for the response.",
+  "hyp": "I think we should rename the function to getUserProfile, actually make that fetchUserProfile, and add a TypeScript type for the response.",
+  "engines": [
+   "parakeet-v3bf16"
+  ],
+  "written": "I think we should rename the function to getUserProfile, actually make that fetchUserProfile, and add a TypeScript type for the response."
+ }
+]
