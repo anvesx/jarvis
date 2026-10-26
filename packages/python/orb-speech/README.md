@@ -1,8 +1,8 @@
 # orb-speech
 
 Speech for orb, behind one HTTP service on 127.0.0.1:8200. It is local, except for one optional cloud engine:
-- **speech to text:** Whistle (the default, 17 MB, about 20 ms a call), Parakeet TDT 0.6B v3 (2.5 GB, more
-  accurate), or Cartesia Ink-Whisper (**a cloud service**: the audio goes to Cartesia; it needs `CARTESIA_API_KEY`)
+- **speech to text:** Parakeet TDT 0.6B v3 (the default, 2.5 GB, the final text), Whistle (17 MB, about 25 ms a
+  call: the voice worker's interim words), or Cartesia Ink-Whisper (**a cloud service**: the audio goes to Cartesia; it needs `CARTESIA_API_KEY`)
 - **text to speech:** Kokoro (the live voice) or two speech LMs for the bench: maya1 (English) and indic-speak
   (22 Indian languages)
 
@@ -13,7 +13,8 @@ or `ORB_STT_FORMAT=raw` turns it off. The rules are in [decision 0010](../../../
 A request can name its engine, so the bench switches models without a restart. The design is in [LLD.md](LLD.md).
 The model choices are in [decision 0005](../../../docs/decisions/0005-stt-parakeet.md) and
 [decision 0007](../../../docs/decisions/0007-whistle-default-and-tts-results.md) and
-[decision 0008](../../../docs/decisions/0008-cartesia-cloud-stt.md) (Cartesia).
+[decision 0008](../../../docs/decisions/0008-cartesia-cloud-stt.md) (Cartesia) and
+[decision 0012](../../../docs/decisions/0012-stt-final-and-interim-engines.md) (Parakeet final, Whistle interims).
 
 ```sh
 python -m orb_speech.models            # fetch the models and check their SHA-256 (about 2.7 GB)

@@ -1,7 +1,7 @@
 """The speech service: the voice worker's STT and TTS, plus the bench, on 127.0.0.1 only.
 
     python -m orb_speech.server            # port 8200, or ORB_SPEECH_PORT
-    ORB_STT_ENGINE=parakeet python -m orb_speech.server  # another default STT; any engine can still be asked for
+    ORB_STT_ENGINE=whistle python -m orb_speech.server   # another default STT; any engine can still be asked for
     ORB_STT_FORMAT=raw python -m orb_speech.server       # the default of format=: written (default) or raw
     ORB_STT_VOCABULARY_FILE=team.txt python -m orb_speech.server  # the team's terms, one per line
 
@@ -219,7 +219,8 @@ TTS_ENGINES = ("kokoro", "maya1", "indic-speak")
 
 
 def make_stt(engine: str, language: str | None):
-    """A speech-to-text engine: whistle (the default), parakeet (decision 0005) or cartesia (a cloud service)."""
+    """A speech-to-text engine: parakeet (the default, decisions 0005 and 0012), whistle (the voice worker's
+    interim words) or cartesia (a cloud service)."""
     from orb_speech import models
 
     if engine not in STT_ENGINES:
@@ -238,7 +239,7 @@ def make_stt(engine: str, language: str | None):
 
 
 def build() -> FastAPI:
-    """The registries, with the default engines loaded now (Whistle and Kokoro: about 2 s on an Apple M5)."""
+    """The registries, with the default engines loaded now (Parakeet and Kokoro)."""
     from orb_speech import models
     from orb_speech.tts import LANGS as tts_langs, KokoroTTS
     from orb_speech.tts_lm import IndicSpeakTTS, Maya1TTS  # numpy only; MLX loads with an engine
@@ -249,7 +250,7 @@ def build() -> FastAPI:
     if not os.environ.get("CARTESIA_API_KEY", "").strip():
         stt_meta["cartesia"]["unavailable"] = CARTESIA_NO_KEY
     stt = Registry({name: (lambda n=name: make_stt(n, language)) for name in STT_ENGINES},
-                   os.environ.get("ORB_STT_ENGINE", "whistle"), heavy=frozenset({"parakeet"}), meta=stt_meta)
+                   os.environ.get("ORB_STT_ENGINE", "parakeet"), heavy=frozenset({"parakeet"}), meta=stt_meta)
     kokoro = lambda: KokoroTTS(models.path(os.environ.get("ORB_TTS_MODEL", "kokoro-v1.0.int8.onnx"), verify=True),
                                models.path("voices-v1.0.bin", verify=True),
                                voice=os.environ.get("ORB_TTS_VOICE", "af_heart"))

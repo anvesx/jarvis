@@ -58,7 +58,8 @@ def _flag(name: str, default: bool) -> bool:
 class Settings:
     agent_url: str = "http://127.0.0.1:8100"
     speech_url: str = "http://127.0.0.1:8200"
-    stt_engine: str = ""            # empty: the speech service's default (ORB_STT_ENGINE there)
+    stt_engine: str = ""            # empty: the speech service's default (ORB_STT_ENGINE there); the final text
+    stt_interim_engine: str = "whistle"  # the interim words (decision 0012)
     stt_language: str = "en"
     stt_vocabulary: str = ""        # comma-separated terms for the speech service (header X-Orb-Vocabulary)
     tts_voice: str = ""             # empty: the speech service's default voice
@@ -86,6 +87,7 @@ class Settings:
             agent_url=os.environ.get("ORB_AGENT_URL", cls.agent_url).rstrip("/"),
             speech_url=os.environ.get("ORB_SPEECH_URL", cls.speech_url).rstrip("/"),
             stt_engine=os.environ.get("ORB_VOICE_STT_ENGINE", "").strip(),
+            stt_interim_engine=os.environ.get("ORB_VOICE_STT_INTERIM_ENGINE", cls.stt_interim_engine).strip(),
             stt_language=os.environ.get("ORB_STT_LANGUAGE", cls.stt_language).strip(),
             stt_vocabulary=os.environ.get("ORB_STT_VOCABULARY", "").strip(),
             tts_voice=os.environ.get("ORB_TTS_VOICE", "").strip(),

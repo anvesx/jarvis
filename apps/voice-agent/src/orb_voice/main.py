@@ -114,16 +114,19 @@ async def entry(ctx: JobContext) -> None:
     stt_engine = cfg.get("stt_engine") or s.stt_engine
     cloud_engines, default_stt = await stt_engines_info(http, s.speech_url)
     stt_name = stt_engine or default_stt or "default"
+    # the interim words come from a cheap engine; the final engine hears each piece once (decision 0012)
+    interim_name = s.stt_interim_engine
     is_cloud = stt_name in cloud_engines
     # a cloud STT bills each call for the whole piece that it hears: fewer interim calls, and no silent warm-up call
-    interim_every = max(s.interim_every, s.cloud_interim_every) if is_cloud else s.interim_every
-    if is_cloud:
+    interim_every = max(s.interim_every, s.cloud_interim_every) if interim_name in cloud_engines else s.interim_every
+    for name in {stt_name, interim_name} & cloud_engines:
         log.warning("the speech-to-text engine is a cloud service: the audio of this call goes to it",
-                    extra={"session": sid, "engine": stt_name})
+                    extra={"session": sid, "engine": name})
     tts_opts = {"engine": cfg.get("tts_engine", ""), "voice": cfg.get("tts_voice") or s.tts_voice,
                 "style": cfg.get("tts_style", ""), "lang": cfg.get("tts_lang", "")}
     log.info("agent session ready", extra={"session": sid, "ms": round((time.perf_counter() - t0) * 1000),
-                                           "stt": stt_name, "tts": tts_opts["engine"] or "default",
+                                           "stt": stt_name, "stt_interim": interim_name,
+                                           "tts": tts_opts["engine"] or "default",
                                            "llm": cfg.get("llm_model") or "default"})
 
     bench = Bench(ctx.room)
@@ -133,8 +136,10 @@ async def entry(ctx: JobContext) -> None:
         log.warning("debug audio is on: every transcribed piece is saved", extra={"dir": debug_dir})
     batch = OrbSTT(http, s.speech_url, engine=stt_engine, language=s.stt_language, debug_dir=debug_dir,
                    vocabulary=s.stt_vocabulary)
+    interim = OrbSTT(http, s.speech_url, engine=interim_name, language=s.stt_language, vocabulary=s.stt_vocabulary)
     session = AgentSession(
-        stt=LiveSTT(stt=batch, vad=vad, interim_every=interim_every, preflight_after=s.preflight_after),
+        stt=LiveSTT(stt=batch, interim=interim, vad=vad, interim_every=interim_every,
+                    preflight_after=s.preflight_after),
         vad=vad,
         llm=OrbLLM(http, s.agent_url, sid, tracker=tracker, on_event=agent_event_logger(sid, s, bench)),
         tts=lk_tts.StreamAdapter(tts=OrbTTS(http, s.speech_url, **tts_opts),
@@ -198,7 +203,8 @@ async def entry(ctx: JobContext) -> None:
     if stt_name == "parakeet":
         asyncio.create_task(batch.warm())  # Parakeet runs on the GPU: open the keep-warm window of the speech service
     await session.start(room=ctx.room, agent=Agent(instructions="The orb agent service writes every reply."))
-    bench.send("session", session=sid, stt=stt_name + (" (cloud)" if is_cloud else ""), llm=cfg.get("llm_model") or "default",
+    stt_label = f"{stt_name}{' (cloud)' if is_cloud else ''}, interim {interim_name}"
+    bench.send("session", session=sid, stt=stt_label, llm=cfg.get("llm_model") or "default",
                tts=tts_opts["engine"] or "default", voice=tts_opts["voice"] or "default", vad="silero",
                turn="livekit-v1-mini")
 

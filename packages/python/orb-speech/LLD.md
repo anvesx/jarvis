@@ -28,7 +28,7 @@ The engine checks of `/v1/tts`:
 | `maya1` | a description in words, ≤ 400 characters, without `"`, `<` or `>`; 3 presets | ignored (emotion tags such as `<laugh>` go in the text) | English only | none, or 1.0 |
 | `indic-speak` | one of 44 names (case does not matter); default: the female voice of `lang` | one of 14 trained tags, or none | 22 Indian languages, `en`, `en-us`, `en-gb` | none, or 1.0 |
 
-Settings: `ORB_STT_ENGINE` (`whistle`), `ORB_STT_FORMAT` (`written`; a bad value stops the start), `ORB_STT_VOCABULARY_FILE` (the team's terms, one per line, `#` comments; a missing or bad file stops the start), `ORB_STT_LANGUAGE`, `ORB_TTS_ENGINE` (`kokoro`), `ORB_TTS_MODEL`,
+Settings: `ORB_STT_ENGINE` (`parakeet`, decision 0012; the voice worker asks `whistle` for interim words), `ORB_STT_FORMAT` (`written`; a bad value stops the start), `ORB_STT_VOCABULARY_FILE` (the team's terms, one per line, `#` comments; a missing or bad file stops the start), `ORB_STT_LANGUAGE`, `ORB_TTS_ENGINE` (`kokoro`), `ORB_TTS_MODEL`,
 `ORB_TTS_VOICE`, `ORB_SPEECH_PORT`, `ORB_MODELS_DIR`, `CARTESIA_API_KEY` and `ORB_CARTESIA_VERSION` (default
 `2026-08-14`). The service reads only `CARTESIA_*` and `ORB_CARTESIA_*` keys from the repo `.env`. End-of-turn detection is not here: the voice worker runs
 LiveKit's turn detector in its own process (decision 0006).

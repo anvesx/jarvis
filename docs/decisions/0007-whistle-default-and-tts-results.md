@@ -1,6 +1,6 @@
 # 0007 · Whistle is the default STT; Kokoro stays the voice; the bench results
 
-Date: 2026-10-22 · Status: accepted · Changes: the default engine of 0005; adds the TTS and LLM measurements
+Date: 2026-10-22 · Status: accepted; the STT default is changed by 0012 (Parakeet final, Whistle interims) · Changes: the default engine of 0005; adds the TTS and LLM measurements
 
 ## Decision
 - **Whistle is the default speech-to-text engine** again (the owner's choice: it is about 5 times faster).

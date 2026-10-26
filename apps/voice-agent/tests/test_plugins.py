@@ -256,7 +256,8 @@ class WordsSTT(stt.STT):
 
 def test_live_stt_sends_growing_interim_words_then_one_final():
     async def go():
-        stream = LiveSTT(stt=WordsSTT(), vad=FakeVAD(silence_frames=5), interim_every=0.1).stream()
+        words = WordsSTT()
+        stream = LiveSTT(stt=words, interim=words, vad=FakeVAD(silence_frames=5), interim_every=0.1).stream()
         events = []
 
         async def read():
@@ -284,10 +285,53 @@ def test_live_stt_sends_growing_interim_words_then_one_final():
     assert len(events[-1].alternatives[0].text.split()) == 6  # the final hears the whole piece: 0.6 s
 
 
+class NamedWordsSTT(WordsSTT):
+    """WordsSTT that writes its own name instead of "word", so a test can tell which engine wrote a text."""
+
+    def __init__(self, name):
+        super().__init__()
+        self.name = name
+
+    async def _recognize_impl(self, buffer, *, language=NOT_GIVEN, conn_options):
+        ev = await super()._recognize_impl(buffer, language=language, conn_options=conn_options)
+        ev.alternatives[0].text = ev.alternatives[0].text.replace("word", self.name)
+        return ev
+
+
+def test_interim_words_come_from_the_interim_engine_and_the_final_from_the_final_engine():
+    async def go(preflight_after):
+        final, interim = NamedWordsSTT("final"), NamedWordsSTT("interim")
+        stream = LiveSTT(stt=final, interim=interim, vad=FakeVAD(silence_frames=8), interim_every=0.1,
+                         preflight_after=preflight_after).stream()
+        events = []
+
+        async def read():
+            async for ev in stream:
+                events.append(ev)
+
+        reader = asyncio.create_task(read())
+        for voiced, n in ((True, 30), (False, 10)):
+            for _ in range(n):
+                stream.push_frame(frame(1000 if voiced else 0))
+                await asyncio.sleep(0.02)
+        stream.end_input()
+        await asyncio.wait_for(reader, 5)
+        return events, final, interim
+
+    for preflight_after in (0.0, 0.06):
+        events, final, interim = asyncio.run(go(preflight_after))
+        caps = texts(events, stt.SpeechEventType.INTERIM_TRANSCRIPT)
+        assert len(caps) >= 2 and all(set(c.split()) == {"interim"} for c in caps)
+        assert all(set(t.split()) == {"final"} for t in texts(events, stt.SpeechEventType.PREFLIGHT_TRANSCRIPT))
+        assert texts(events, stt.SpeechEventType.FINAL_TRANSCRIPT) == [" ".join(["final"] * 6)]
+        assert final.calls == 1  # the final engine hears the piece once: no interim call goes to it
+        assert interim.calls >= len(caps)  # an interim that ends after the piece is not sent
+
+
 async def live_run(pattern, preflight_after=0.06, silence_frames=8):
     """Pushes 20 ms frames in real time: `pattern` is a list of (voiced, frames). Returns the events and the STT."""
     words = WordsSTT()
-    stream = LiveSTT(stt=words, vad=FakeVAD(silence_frames=silence_frames), interim_every=10.0,
+    stream = LiveSTT(stt=words, interim=words, vad=FakeVAD(silence_frames=silence_frames), interim_every=10.0,
                      preflight_after=preflight_after).stream()
     events = []
 

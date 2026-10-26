@@ -4,7 +4,8 @@
 - LiveSTT: a streaming STT made from a batch STT and a VAD. While the person speaks, the growing piece is
   transcribed again every `interim_every` seconds, so the session has interim words. LiveKit counts those words for
   `min_words`: a real barge-in stops the agent within about a second, and a one-word backchannel ("Sure.") never cuts
-  it. Whistle takes about 10 to 20 ms per call, so this costs little.
+  it. The interim words come from a cheap engine (Whistle, on the CPU), and the final text from the accurate one
+  (Parakeet, on the GPU), which hears each piece once (decision 0012).
 - OrbTTS: one HTTP call per sentence. The speech service streams PCM16 mono at 24 kHz.
 - OrbLLM: the orb agent service is the LLM. Only the person's newest words are sent, because the agent service owns
   the history. A turn whose reply never played is sent again with replace_last (see TurnTracker).
@@ -142,12 +143,18 @@ class LiveSTT(stt.STT):
     transcript. LiveKit then starts the reply early (preemptive generation). When the pause ends the piece, the final
     transcript is that same text, so LiveKit keeps the early reply. When the person speaks again, the preflight is
     dropped, and LiveKit replaces the early reply. 0 turns preflight off.
+
+    `interim` writes the interim words; `stt` writes the preflight and final texts. Interim calls run again on the
+    whole growing piece, so an accurate engine there costs 11 to 20 times its one final call and delays the final
+    behind it (decision 0012).
     """
 
-    def __init__(self, *, stt: stt.STT, vad: vad.VAD, interim_every: float = 0.3, preflight_after: float = 0.0):
+    def __init__(self, *, stt: stt.STT, interim: stt.STT, vad: vad.VAD, interim_every: float = 0.3,
+                 preflight_after: float = 0.0):
         # the keyword names match LiveKit's StreamAdapter; inside, they hide the modules, hence _Capabilities
         super().__init__(capabilities=_Capabilities(streaming=True, interim_results=True))
         self._stt, self._vad, self._every, self._preflight_after = stt, vad, interim_every, preflight_after
+        self._interim = interim
         self._stt.on("metrics_collected", self._forward_metrics)
 
     @property
@@ -183,8 +190,8 @@ class _LiveStream(stt.RecognizeStream):
         super().__init__(stt=live, conn_options=APIConnectOptions(max_retry=0, timeout=conn_options.timeout))
         self._live, self._language, self._inner_opts = live, language, conn_options
 
-    async def _recognize(self, frames: list[rtc.AudioFrame]) -> stt.SpeechData | None:
-        ev = await self._live.wrapped.recognize(buffer=utils.merge_frames(frames), language=self._language,
+    async def _recognize(self, frames: list[rtc.AudioFrame], engine: stt.STT) -> stt.SpeechData | None:
+        ev = await engine.recognize(buffer=utils.merge_frames(frames), language=self._language,
                                                 conn_options=self._inner_opts)
         return ev.alternatives[0] if ev.alternatives and ev.alternatives[0].text else None
 
@@ -204,7 +211,7 @@ class _LiveStream(stt.RecognizeStream):
 
         async def interim(seg: int, frames: list[rtc.AudioFrame]) -> None:
             try:
-                data = await self._recognize(frames)
+                data = await self._recognize(frames, self._live._interim)
             except Exception as e:  # an interim failure is not a turn failure; the final call decides
                 log.debug("interim transcription failed: %s", e)
                 return
@@ -213,7 +220,7 @@ class _LiveStream(stt.RecognizeStream):
                                                            alternatives=[data]))
 
         async def early(seg: int, frames: list[rtc.AudioFrame]) -> stt.SpeechData | None:
-            data = await self._recognize(frames)
+            data = await self._recognize(frames, self._live.wrapped)
             if data and speaking and seg == segment and preflight is asyncio.current_task():
                 self._event_ch.send_nowait(stt.SpeechEvent(type=stt.SpeechEventType.PREFLIGHT_TRANSCRIPT,
                                                            alternatives=[data]))
@@ -232,7 +239,7 @@ class _LiveStream(stt.RecognizeStream):
                     return data
                 except Exception as e:  # a failed preflight is not a failed turn: transcribe again
                     log.debug("preflight transcription failed: %s", e)
-            return await self._recognize(frames)
+            return await self._recognize(frames, self._live.wrapped)
 
         async def recognize() -> None:
             nonlocal segment, speaking, preflight
