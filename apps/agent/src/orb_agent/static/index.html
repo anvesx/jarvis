@@ -926,12 +926,14 @@ async function onTranscription(reader, sender, myIdentity) {
   } catch (e) { event("a caption stream failed: " + e.message); }
 }
 let callState = "off", agentState = "", userSpeaking = false, agentSeen = false;  // off, connecting or live
+let sttLoading = "";  // the STT engine that loads at the start of a call (Qwen3-ASR: 10 to 80 s); speak after it
 let voiceIssue = null;  // why a call cannot start (see voiceBlock); the orb says so, because a phone shows only the top of the page
 function updateOrb() {
   const wanted = callState === "off" ? "idle" : callState === "connecting" ? "connecting" : agentState || "initializing";
   const name = ORB_TEXT[wanted] ? wanted : "listening";  // a state of a later agent version: treat it as listening
   orb.setState(name);
   const text = callState === "off" && voiceIssue ? (voiceIssue.hard ? "Voice is not available here" : "Voice is not ready")
+    : callState === "live" && sttLoading ? `Loading speech model ${sttLoading}… wait to speak`
     : name === "listening" && userSpeaking ? "Hearing you…" : ORB_TEXT[name];
   $("orb-state").textContent = text;
   orb.el.dataset.state = name;
@@ -980,6 +982,9 @@ function onBench(e) {
     $("vwarn").hidden = e.chars > 0;
     $("vwarn").textContent = e.chars > 0 ? "" : "The LLM wrote no words for this turn. Say it again, or choose another LLM.";
   }
+  else if (e.type === "stt_loading") { sttLoading = e.engine; updateOrb(); }
+  else if (e.type === "stt_ready") { sttLoading = ""; updateOrb(); }
+  else if (e.type === "stt_error") { sttLoading = ""; updateOrb(); warn(e.error); }
   else if (e.type === "agent_state") $("agent").textContent = e.state;
   else if (e.type === "user_state") $("you").textContent = e.state;
   else if (e.type === "session") $("callinfo").textContent = `stt ${e.stt} · llm ${e.llm} · tts ${e.tts} (${e.voice}) · vad ${e.vad} · turn ${e.turn}`;
@@ -1037,7 +1042,7 @@ async function talk() {
     });
     r.on(LK.RoomEvent.Disconnected, () => {
       if (room === r) room = null;
-      callState = "off"; agentState = ""; userSpeaking = false;
+      callState = "off"; agentState = ""; userSpeaking = false; sttLoading = "";
       for (const k of ["agentMeter", "micMeter"]) { if (orb[k]) orb[k].close(); orb[k] = null; }
       clearInterval(poll); poll = null;
       $("talk").textContent = "Talk"; $("talk").className = "btn primary talk";

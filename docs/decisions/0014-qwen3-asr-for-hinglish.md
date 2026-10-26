@@ -51,3 +51,7 @@ videos, 3–15 s, 389 s) of `agarwalayushi/hinglish` (CC BY 4.0), references in 
 - The polish (decision 0013) gets Devanagari text; its guard compares words, so it keeps the input when the model
   transliterates. Not measured on Hinglish.
 - `python -m orb_speech.models --all` fetches the 4.1 GB weights.
+- **Qwen3 loads when the call starts (2026-10-26, owner's live test).** It loaded on the first words instead: 77 s with
+  the Mac in swap, so the first final timed out and "Yeah." was lost. The worker now sends one silent call at the start
+  for any local engine and waits up to 120 s; the call page shows "Loading speech model… wait to speak", and a clear
+  message when it fails.

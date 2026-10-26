@@ -81,6 +81,24 @@ async def ensure_session(http: httpx.AsyncClient, agent_url: str, sid: str) -> d
     return r.json().get("config") or {}
 
 
+def report_stt_load(load: asyncio.Task, bench: Bench, sid: str, engine: str) -> None:
+    """Tells the call page while the STT engine loads, so the person waits before speaking, and why it failed.
+    The events go after session.start: before it, the room is not connected and the page would miss them."""
+    if not load.done():
+        bench.send("stt_loading", engine=engine)
+
+    def done(task: asyncio.Task) -> None:
+        if task.cancelled():  # the call ended first
+            return
+        error = task.result()  # OrbSTT.load never raises
+        if error:
+            log.error("speech-to-text engine did not load", extra={"session": sid, "engine": engine, "error": error})
+            bench.send("stt_error", engine=engine, error=error)
+        else:
+            bench.send("stt_ready", engine=engine)
+    load.add_done_callback(done)
+
+
 def agent_event_logger(sid: str, s: Settings, bench: Bench):
     def on_event(ev: dict) -> None:
         kind, data = ev.get("type"), ev.get("data") or {}
@@ -222,13 +240,15 @@ async def entry(ctx: JobContext) -> None:
         log.error("session error", extra={"session": sid, "error": str(getattr(ev, "error", ev))})
         bench.send("error", error=str(getattr(ev, "error", ev)))
 
-    if stt_name == "parakeet":
-        asyncio.create_task(batch.warm())  # Parakeet runs on the GPU: open the keep-warm window of the speech service
+    # a local engine loads now, while the room connects; a cloud one bills the silent call, so it is skipped
+    load = None if is_cloud else asyncio.create_task(batch.load())
     await session.start(room=ctx.room, agent=Agent(instructions="The orb agent service writes every reply."))
     stt_label = f"{stt_name}{' (cloud)' if is_cloud else ''}, interim {interim_name}"
     bench.send("session", session=sid, stt=stt_label, llm=cfg.get("llm_model") or "default",
                tts=tts_opts["engine"] or "default", voice=tts_opts["voice"] or "default", vad="silero",
                turn="livekit-v1-mini")
+    if load:
+        report_stt_load(load, bench, sid, stt_name)
 
 
 def main() -> None:

@@ -31,6 +31,7 @@ from livekit.agents.types import DEFAULT_API_CONNECT_OPTIONS, NOT_GIVEN, NotGive
 log = logging.getLogger("orb.voice")
 
 TTS_SAMPLE_RATE = 24000
+LOAD_TIMEOUT = 120.0  # s: the first load of a heavy STT engine; 77 s for Qwen3-ASR with the Mac in swap
 _Capabilities = stt.STTCapabilities
 # LiveKit joins the pieces of one turn with spaces, and Whistle ends each piece with a period:
 # "use Go for the back end. because the team". A period before a lowercase word is such a join.
@@ -127,13 +128,30 @@ class OrbSTT(stt.STT):
         for p in (base.with_suffix(".wav"), base.with_suffix(".txt")):
             os.chmod(p, 0o600)
 
-    async def warm(self) -> None:
-        """0.2 s of silence: opens the speech service's keep-warm window (it matters for Parakeet on the GPU)."""
+    async def load(self, timeout: float = LOAD_TIMEOUT) -> str | None:
+        """0.2 s of silence, sent when the call starts: the speech service loads the engine now, not on the person's
+        first words (Qwen3-ASR takes 10 to 80 s), and opens its keep-warm window (Parakeet on the GPU). The call
+        waits up to `timeout`, longer than a transcript may take. None when the engine is ready, else a message for
+        the person. It never raises: a warm-up must never stop the job."""
         frame = rtc.AudioFrame(data=bytes(6400), sample_rate=16000, num_channels=1, samples_per_channel=3200)
+        t0 = time.perf_counter()
         try:
-            await self.recognize(buffer=frame)
-        except Exception as e:  # a warm-up must never stop the job
-            log.warning("speech-to-text warm-up failed: %s", e)
+            await self.recognize(buffer=frame, conn_options=APIConnectOptions(max_retry=0, timeout=timeout))
+        except APIStatusError as e:  # the service answered: the engine did not load (weights missing, no memory…)
+            error = f"Speech-to-text is not ready ({e.message.rstrip('.')}). Choose another STT engine."
+        except APIConnectionError as e:
+            if isinstance(e.__cause__, httpx.TimeoutException):
+                error = (f"The speech-to-text model {self.model} did not load in {timeout:.0f} s. The Mac may be "
+                         "short of memory: close large apps, then start the call again.")
+            else:
+                error = f"The speech service at {self._url} does not answer. Start it (scripts/dev.sh), then call again."
+        except Exception as e:
+            error = f"The speech-to-text model {self.model} did not load: {type(e).__name__}."
+        else:
+            log.info("speech-to-text engine %s ready in %.1f s", self.model, time.perf_counter() - t0)
+            return None
+        log.warning("speech-to-text warm-up failed: %s", error)
+        return error
 
 
 async def stt_engines_info(http: httpx.AsyncClient, base_url: str) -> tuple[set[str], str]:

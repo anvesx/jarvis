@@ -94,6 +94,41 @@ def test_stt_errors_carry_the_service_message():
         asyncio.run(go())
 
 
+def test_load_waits_long_for_the_engine_and_says_when_it_is_ready():
+    seen = []
+
+    def handler(req):
+        seen.append(req)
+        return httpx.Response(200, json={"text": "", "audio_ms": 200})
+
+    async def go():
+        async with client(handler) as http:
+            return await OrbSTT(http, "http://speech", engine="qwen3").load()
+
+    assert asyncio.run(go()) is None
+    assert seen[0].url.params["engine"] == "qwen3"
+    assert seen[0].extensions["timeout"]["read"] == 120  # a transcript's timeout is a few seconds
+
+
+@pytest.mark.parametrize("failure, message", [
+    (httpx.Response(503, json={"error": "stt engine qwen3 did not load: weights missing."}),
+     "Speech-to-text is not ready (stt engine qwen3 did not load: weights missing). Choose another STT engine."),
+    (httpx.ReadTimeout("slow"), "The speech-to-text model qwen3 did not load in 120 s. The Mac may be short of memory"),
+    (httpx.ConnectError("refused"), "The speech service at http://speech does not answer. Start it"),
+])
+def test_load_never_raises_and_says_why_the_engine_is_not_ready(failure, message):
+    def handler(req):
+        if isinstance(failure, Exception):
+            raise failure
+        return failure
+
+    async def go():
+        async with client(handler) as http:
+            return await OrbSTT(http, "http://speech", engine="qwen3").load()
+
+    assert asyncio.run(go()).startswith(message)
+
+
 # --- TTS -------------------------------------------------------------------------------------------------------------
 
 def test_tts_sends_the_options_and_streams_pcm_at_24khz():

@@ -29,8 +29,10 @@ The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a
    One idle process waits warm for the next room.
 2. **Join** (`entry`): find the session, `PUT` it at the agent service (topic "Open discussion" if new), read its
    config, then ask the speech service which STT engines are cloud services (`GET /v1/engines`). Build the
-   `AgentSession` with the session's engines. For Parakeet, one silent STT call opens the speech service's keep-warm
-   window. Two engines: the final engine (the session's, else the speech service's default: Parakeet) writes the
+   `AgentSession` with the session's engines. For a local final engine, one silent STT call (`OrbSTT.load`, up to
+   120 s) makes the speech service load it now, not on the person's first words (Qwen3-ASR takes 10 to 80 s), and
+   opens its keep-warm window (Parakeet). The page gets `stt_loading`, then `stt_ready` or `stt_error` with a message
+   (not loaded, too slow, or no speech service); the orb says "Loading speech model… wait to speak". Two engines: the final engine (the session's, else the speech service's default: Parakeet) writes the
    preflight and final texts, and the interim engine (`ORB_VOICE_STT_INTERIM_ENGINE`, Whistle) writes the interim
    words (decision 0012). For a cloud engine (Cartesia), the worker logs a warning; a cloud interim engine is asked
    only every `ORB_CLOUD_INTERIM_EVERY_S` (1.0 s), and a cloud final engine gets no warm-up call (silence is billed).
@@ -69,6 +71,7 @@ The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a
 | Silero min speech / min silence / prefix | 0.05 / 0.55 / 0.5 s | `ORB_VAD_MIN_SPEECH_S`, `_MIN_SILENCE_S`, `_PREFIX_S` | plugin defaults |
 | Endpointing min / max delay | 0.3 / 2.5 s | `ORB_MIN_ENDPOINTING_S`, `ORB_MAX_ENDPOINTING_S` | LiveKit defaults with the audio turn detector |
 | Interruption | 0.5 s and 2 words; resume after 2.0 s | `ORB_MIN_INTERRUPTION_S`, `_WORDS` | chosen: "Sure." is 1 word |
+| STT load at the start | one silent call with a 120 s timeout; a message, never an exception, when the engine did not load, was too slow or the service is down | `test_load_*` |
 | STT vocabulary | comma-separated terms, sent on every call; empty sends none | `ORB_STT_VOCABULARY` | chosen; the speech service checks the limits (decision 0011) |
 | Polish strength | empty: the speech service's `ORB_POLISH_STRENGTH` (medium) | `ORB_VOICE_POLISH` | decision 0013; `verbatim` sends no call |
 | Interim engine | `whistle` | `ORB_VOICE_STT_INTERIM_ENGINE` | measured: Parakeet interims cost 11–20× the final's GPU work and delay the final up to 230 ms; Whistle's leave it unchanged (decision 0012) |
