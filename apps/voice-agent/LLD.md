@@ -1,8 +1,8 @@
 # LLD: orb-voice-agent (the voice worker)
 
-Code: `src/orb_voice/` · Tests: `tests/` (22) · Status: built · Last update: 2026-10-22
+Code: `src/orb_voice/` · Tests: `tests/` (42) · Status: built · Last update: 2026-10-27
 
-**One Python worker on LiveKit Agents 1.8.8 hears the person, decides when the turn ends, and speaks the agent's
+**One Python worker on LiveKit Agents 1.8.9 hears the person, decides when the turn ends, and speaks the agent's
 reply.** Silero and LiveKit's turn detector are fixed parts. Speech to text, the reply and text to speech are orb's
 services, so the bench can switch their models per session (decision 0006).
 
@@ -13,13 +13,20 @@ LiveKit room (browser mic, AEC on) ─▶ Silero VAD ─▶ LiveSTT (interim wor
 events (states, transcripts, metrics) ─▶ room data channel "orb.bench" ─▶ bench page and turn suite
 ```
 
+**Gemini Live mode** (`voice_mode: gemini-live`, docs/design/gemini-live.md): the session is
+`AgentSession(llm=google.realtime.RealtimeModel(...))` and nothing else (`gemini_call`, `gemini_live.py`). Gemini hears,
+detects the turns on its server, thinks and speaks; its two transcripts become the captions. The worker asks the agent
+service once for the instructions (`GET /v1/sessions/{id}/instructions`) and never calls the speech service, the
+agent's turns or Ollama, so none of their models load. The audio of the call goes to Google (a warning in the log).
+Errors reach the page once, in words (`gemini_live.explain`): key refused, quota, model not accepted, no network.
+
 ## 1. Input
 | Input | From | Trust |
 |---|---|---|
 | A job for each new room | the LiveKit server (automatic dispatch, no agent name) | the dev server on 127.0.0.1 |
 | The person's audio, 48 kHz | the room | untrusted: noise, echo and any words |
-| The session config `{stt_engine, llm_model, tts_engine, tts_voice, tts_style, tts_lang}` | `PUT /v1/sessions/{id}` of the agent service, at join | checked by the agent service |
-| Settings (table in section 3) | the environment; the repo `.env` fills in only unset `ORB_*` and `LIVEKIT_*` keys | the operator |
+| The session config `{stt_engine, llm_model, tts_engine, tts_voice, tts_style, tts_lang, voice_mode, gemini_model, gemini_voice}` | `PUT /v1/sessions/{id}` of the agent service, at join | checked by the agent service |
+| Settings (table in section 3) | the environment; the repo `.env` fills in only unset `ORB_*` and `LIVEKIT_*` keys and `GOOGLE_API_KEY` | the operator |
 
 The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a-z 0-9 -`); any other room gets
 `room-` + the first 12 hex digits of its SHA-256.
@@ -71,6 +78,9 @@ The room name gives the session: `orb-<id>` is the session `<id>` (3 to 48 of `a
 | Silero min speech / min silence / prefix | 0.05 / 0.55 / 0.5 s | `ORB_VAD_MIN_SPEECH_S`, `_MIN_SILENCE_S`, `_PREFIX_S` | plugin defaults |
 | Endpointing min / max delay | 0.3 / 2.5 s | `ORB_MIN_ENDPOINTING_S`, `ORB_MAX_ENDPOINTING_S` | LiveKit defaults with the audio turn detector |
 | Interruption | 0.5 s and 2 words; resume after 2.0 s | `ORB_MIN_INTERRUPTION_S`, `_WORDS` | chosen: "Sure." is 1 word |
+| Gemini Live call | only `llm=` RealtimeModel (no STT/TTS/VAD); the session's instructions, or the voice rules when the agent service fails; one page error per call, retries quiet | `test_a_gemini_call_*`, `test_a_gemini_error_*` |
+| Gemini options and lists | model, voice, both transcripts, sliding window, resumption; orb's lists match the plugin's | `test_options_*`, `test_orbs_gemini_lists_are_the_plugins` |
+| Gemini errors in words | key refused, quota, model, network, unknown; never the key | `test_errors_become_a_message_that_says_what_to_do` |
 | STT load at the start | one silent call with a 120 s timeout; a message, never an exception, when the engine did not load, was too slow or the service is down | `test_load_*` |
 | STT vocabulary | comma-separated terms, sent on every call; empty sends none | `ORB_STT_VOCABULARY` | chosen; the speech service checks the limits (decision 0011) |
 | Polish strength | empty: the speech service's `ORB_POLISH_STRENGTH` (medium) | `ORB_VOICE_POLISH` | decision 0013; `verbatim` sends no call |

@@ -174,6 +174,11 @@ print(f"Ollama answers, and the LLM {want} and the polish LLM {polish} are insta
 '
 }
 
+c_gemini_key() { # informational: the value is never printed, and no call goes to Google
+  if [[ -n "$(setting GOOGLE_API_KEY)" ]]; then echo "GOOGLE_API_KEY is set: the Gemini Live mode is available"
+  else echo "GOOGLE_API_KEY is not set: the Gemini Live mode is off (the orb pipeline works without it)"; fi
+}
+
 c_agent() {
   curl -sf -m 30 "$AGENT/health" | "$PY" -I -c '
 import json, sys
@@ -293,7 +298,7 @@ c_e2e() {
 
 c_no_secrets_in_logs() { # the values (never printed) of the secrets of .env must not be in a log of the stack
   local hits
-  hits="$(grep -lF -f <(for n in ORB_SHARE_KEY LIVEKIT_API_SECRET CARTESIA_API_KEY; do
+  hits="$(grep -lF -f <(for n in ORB_SHARE_KEY LIVEKIT_API_SECRET CARTESIA_API_KEY GOOGLE_API_KEY; do
       v="$(setting "$n")"; [[ ${#v} -ge 12 ]] && printf '%s\n' "$v"; done) \
       "$ROOT"/data/logs/{ollama,agent,livekit,speech,voice,ngrok}.log "$LOGS"/*.log 2>/dev/null)"
   if [[ -n "$hits" ]]; then
@@ -353,6 +358,7 @@ start_stack
 if run_check "the stack starts" wait_ready; then
   run_check "Ollama and the LLM" c_ollama
   run_check "agent service health" c_agent
+  run_check "Gemini key (Gemini Live mode)" c_gemini_key
   run_check "voice status" c_voice_status
   run_check "speech service" c_speech
   run_check "speech round trip (TTS, then STT)" c_speech_roundtrip

@@ -12,7 +12,8 @@ Today it hosts one agent, `discussion`, with one instance for each LLM that a se
 |---|---|---|---|
 | `POST /v1/sessions` | `{"topic", "agent"?, "config"?}` | topic 1 to 2,000 characters; config below | 201 and the state |
 | `PUT /v1/sessions/{id}/config` | the config | the LLM cannot change after the start | the config |
-| `GET /v1/models` | none | | `{"llm": {"default", "installed"}}` from Ollama's list |
+| `GET /v1/models` | none | | `{"llm": {"default", "installed"}, "gemini": {"available", "models", "default_model", "voices", "default_voice"}}`; `available`: `GOOGLE_API_KEY` is set (its value is never sent) |
+| `GET /v1/sessions/{id}/instructions` | none | the session must exist | `{"instructions"}`: the system prompt of a Gemini Live call (orb's prompt without the per-turn note rule, and the voice rules); loads the topic's source, never warms the LLM |
 | `GET /v1/sessions` | none | | `[{id, topic, agent}]` |
 | `GET /v1/sessions/{id}[?since=v]` | none | ID rule (orb-core) | the state, or `{"version": v, "unchanged": true}` |
 | `PUT /v1/sessions/{id}` | `{"topic", "agent"?}` | | the state; creates the session when it is missing |
@@ -34,7 +35,12 @@ Today it hosts one agent, `discussion`, with one instance for each LLM that a se
 
 The session config: `stt_engine`, `llm_model`, `tts_engine`, `tts_voice` (≤ 400 characters: a maya1 voice is a
 description), `tts_style` and `tts_lang`. The service checks `llm_model` against Ollama's installed models. The
-speech service checks the rest when the voice worker uses them.
+speech service checks the rest when the voice worker uses them. Gemini Live (docs/design/gemini-live.md):
+`voice_mode` (`orb` or `gemini-live`), `gemini_model` and `gemini_voice`, checked against `orb_core.gemini`; a
+`gemini-live` config without `GOOGLE_API_KEY` gets 400 with what to do. A session that starts in `gemini-live` loads its
+source but never warms the LLM (gemma4:e2b is 7.9 GB, and the call does not use it). With `ORB_GEMINI_ONLY=1`
+(`scripts/dev.sh --gemini`) a voice config that asks for the orb pipeline gets 400, no session warms the LLM, and
+`/v1/models` says `gemini.only` (the page then offers only Gemini Live).
 
 ## 2. Algorithm
 - **Start:** load settings (`orb_core.config.bootstrap`), make the Jev reader and the Ollama client, build the
@@ -63,8 +69,12 @@ speech service checks the rest when the voice worker uses them.
   the server passed on. The two `validate` pages are forwarded too. The target is fixed, the routes sit behind the gate,
   and LiveKit still checks the token. The clean-up of a connection is shielded from cancellation. The audio does not
   pass here: it goes straight between the device and the LiveKit server.
-- **The page** (`static/index.html`, no build step, one file served from disk): a model bar on top (STT, LLM, TTS,
-  voice, language, style; Silero and the LiveKit turn detector are shown as fixed), then five tabs.
+- **The page** (`static/index.html`, no build step, one file served from disk): a model bar on top (Mode, then STT, LLM,
+  TTS, voice, language, style; Silero and the LiveKit turn detector are shown as fixed), then five tabs. **Mode** is
+  "orb pipeline" or "Gemini Live (cloud)" (disabled, with the reason, without `GOOGLE_API_KEY`); Gemini Live shows its
+  model and voice instead of the pipeline's fields, a note that the audio goes to Google, and captions labelled Gemini.
+  The bar reads `/v1/models` first and on its own, so Gemini Live works when the speech service is not running. The page
+  remembers the mode in this browser (`orb-mode`).
   - **Talk** is the voice call. It has an orb (LiveKit's Aura visualizer, ported to the page: the shader and the state
     table are theirs, Apache-2.0, license and notice in `static/vendor/`), a status line, captions of what the STT
     heard and what the TTS speaks (LiveKit's `lk.transcription` text streams, each labelled with its model) and two

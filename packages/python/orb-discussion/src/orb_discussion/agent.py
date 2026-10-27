@@ -94,6 +94,7 @@ class DiscussionSession:
         self._lock = asyncio.Lock()
         self._prepare_lock = asyncio.Lock()
         self._prepared = False
+        self._source_loaded = False  # prepare(warm=False) loaded the source but did not warm the LLM
         self._pending: asyncio.Task | None = None  # the read in progress: of a person message or of a reply
         self._checkpoint = None  # the state before the last person message, for replace_last
 
@@ -101,16 +102,24 @@ class DiscussionSession:
     def system_prompt(self) -> str:
         return prompt.system_prompt(self.title, self.source)
 
-    async def prepare(self) -> None:
-        """Load the source named in the topic and warm the LLM with the system prompt. Safe to call twice."""
+    def realtime_prompt(self) -> str:
+        return prompt.realtime_prompt(self.title, self.source)
+
+    async def prepare(self, warm: bool = True) -> None:
+        """Load the source named in the topic and warm the LLM with the system prompt. Safe to call twice.
+        `warm=False` (a Gemini Live session) loads the source only: warming loads the LLM, gigabytes of memory."""
         async with self._prepare_lock:
-            if self._prepared:
+            if self._prepared or (self._source_loaded and not warm):
                 return
             url = web.find_url(self.topic)
-            if url:
+            if url and not self._source_loaded:
                 self.source = await asyncio.to_thread(self.agent.load_source, url)
                 if self.source.get("title"):
                     self.engine.ledger.topic = f"{self.title} (source: {self.source['title']})"
+            self._source_loaded = True
+            if not warm:
+                self.version += 1
+                return
             await self.agent.llm.warm([{"role": "system", "content": self.system_prompt()},
                                        {"role": "user", "content": "Ready?"}])
             self._prepared = True

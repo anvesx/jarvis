@@ -52,8 +52,10 @@ def load_env_files(*paths: str | os.PathLike | None) -> list[str]:
     return loaded
 
 
-def load_env_prefixes(prefixes: tuple[str, ...], root: str | os.PathLike | None = None) -> list[str]:
-    """Copy only the variables of the repo .env whose names start with one of `prefixes`, when they are not set.
+def load_env_prefixes(prefixes: tuple[str, ...], root: str | os.PathLike | None = None,
+                      exact: tuple[str, ...] = ()) -> list[str]:
+    """Copy only the variables of the repo .env whose names start with one of `prefixes`, or are one of `exact`,
+    when they are not set.
 
     Other secrets in the file (a Cloudflare token, for example) never enter the process.
     Returns the names that were set, never the values.
@@ -63,7 +65,7 @@ def load_env_prefixes(prefixes: tuple[str, ...], root: str | os.PathLike | None 
         return []
     loaded = []
     for key, value in parse_env_text(path.read_text()).items():
-        if key.startswith(prefixes) and value and key not in os.environ:
+        if (key in exact or key.startswith(prefixes)) and value and key not in os.environ:
             os.environ[key] = value
             loaded.append(key)
     return loaded

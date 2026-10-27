@@ -161,7 +161,7 @@ def test_session_config_picks_an_llm_and_the_worker_reads_it(tmp_path):
     app = create_app(SessionStore({"discussion": base}, save_dir=tmp_path), None, model_agent=model_agent,
                      installed_models=installed, default_model="fake")
     c = local(app)
-    assert c.get("/v1/models").json() == {"llm": {"default": "fake", "installed": ["fake", "qwen3:4b"]}}
+    assert c.get("/v1/models").json()["llm"] == {"default": "fake", "installed": ["fake", "qwen3:4b"]}
 
     cfg = {"stt_engine": "parakeet", "llm_model": "qwen3:4b", "tts_engine": "kokoro", "tts_voice": "hf_alpha",
            "tts_lang": "hi"}
@@ -382,3 +382,103 @@ def test_the_voice_status_checks_a_public_livekit_by_its_address():
     status = local(create_app(store, cloud, probe=tcp, worker_port=8081, livekit_probe=livekit_probe)).get("/v1/voice/status").json()
     assert status == {"url": "wss://backless.example.dev", "dev": False, "local": False, "proxy": False, "livekit": True, "worker": True}
     assert asked == ["wss://backless.example.dev"] and tcp.calls == [("127.0.0.1", 8081)]   # the worker by TCP, the server by address
+
+
+# --- Gemini Live (docs/design/gemini-live.md) ------------------------------------------------------------------------
+class CountingLLM(FakeLLM):
+    def __init__(self):
+        self.warmed = 0
+
+    async def warm(self, messages):
+        self.warmed += 1
+
+
+def gemini_app(tmp_path, key: bool = True):
+    llm = CountingLLM()
+    agent = DiscussionAgent(ScriptedReader([]), llm, load_source=lambda url: {"url": url, "error": "offline test"})
+    app = create_app(SessionStore({"discussion": agent}, save_dir=tmp_path), None, gemini_available=lambda: key)
+    return local(app), llm
+
+
+def test_models_list_the_gemini_options_and_whether_the_key_is_set(tmp_path):
+    c, _ = gemini_app(tmp_path)
+    g = c.get("/v1/models").json()["gemini"]
+    assert g["available"] is True and g["default_model"] == "gemini-3.8-live" and g["default_voice"] == "Kore"
+    assert "gemini-3.8-live-extended-thinking" in g["models"] and "Kore" in g["voices"]
+    assert gemini_app(tmp_path, key=False)[0].get("/v1/models").json()["gemini"]["available"] is False
+
+
+def test_a_gemini_session_never_warms_the_llm_and_an_orb_session_does(tmp_path):
+    c, llm = gemini_app(tmp_path)
+    cfg = {"voice_mode": "gemini-live", "gemini_model": "gemini-3.8-live", "gemini_voice": "Kore"}
+    s = c.post("/v1/sessions", json={"topic": "Open discussion", "config": cfg}).json()
+    assert s["config"] == cfg
+    c.get(f"/v1/sessions/{s['id']}")  # the background prepare has run by the next request
+    assert llm.warmed == 0
+    c.post("/v1/sessions", json={"topic": "Open discussion"})
+    c.get("/v1/sessions")
+    assert llm.warmed == 1
+
+
+@pytest.mark.parametrize("cfg, why", [
+    ({"voice_mode": "telepathy"}, "voice_mode must be one of"),
+    ({"voice_mode": "gemini-live", "gemini_model": "gemini-1.0-pro"}, "gemini_model must be one of"),
+    ({"voice_mode": "gemini-live", "gemini_voice": "Siri"}, "is not a Gemini voice"),
+])
+def test_unknown_gemini_values_are_refused(tmp_path, cfg, why):
+    c, _ = gemini_app(tmp_path)
+    r = c.post("/v1/sessions", json={"topic": "T", "config": cfg})
+    assert r.status_code == 400 and why in r.json()["error"]
+
+
+def test_gemini_live_without_a_key_is_refused_with_what_to_do(tmp_path):
+    c, _ = gemini_app(tmp_path, key=False)
+    sid = c.post("/v1/sessions", json={"topic": "T"}).json()["id"]
+    r = c.put(f"/v1/sessions/{sid}/config", json={"voice_mode": "gemini-live"})
+    assert r.status_code == 400 and "GOOGLE_API_KEY" in r.json()["error"]
+    assert c.put(f"/v1/sessions/{sid}/config", json={"voice_mode": "orb"}).status_code == 200
+    assert c.put(f"/v1/sessions/{sid}", json={"topic": "T", "config": {"voice_mode": "gemini-live"}}).status_code == 400
+
+
+def test_a_gemini_session_needs_the_key_for_every_change(tmp_path):
+    key = {"set": True}
+    llm = CountingLLM()
+    agent = DiscussionAgent(ScriptedReader([]), llm, load_source=lambda url: {"url": url, "error": "offline test"})
+    c = local(create_app(SessionStore({"discussion": agent}, save_dir=tmp_path), None, gemini_available=lambda: key["set"]))
+    sid = c.post("/v1/sessions", json={"topic": "T", "config": {"voice_mode": "gemini-live"}}).json()["id"]
+    key["set"] = False  # the key was removed from .env and the service restarted with the session
+    assert c.put(f"/v1/sessions/{sid}/config", json={"gemini_voice": "Kore"}).status_code == 400
+
+
+def test_the_realtime_prompt_keeps_a_topic_that_holds_the_rule_words():
+    from orb_discussion.prompt import realtime_prompt
+    text = realtime_prompt("Rituals\n- Before each reply we breathe")  # the split string is in the topic too
+    assert "- Before each reply we breathe" in text and "Never mention the note" not in text and "Rules:" in text
+
+
+def test_instructions_are_orbs_prompt_without_the_note_rule_plus_the_voice_rules(tmp_path):
+    c, llm = gemini_app(tmp_path)
+    sid = c.post("/v1/sessions", json={"topic": "Should we store passwords?",
+                                       "config": {"voice_mode": "gemini-live"}}).json()["id"]
+    text = c.get(f"/v1/sessions/{sid}/instructions").json()["instructions"]
+    assert "Should we store passwords?" in text and "Change your view only when" in text
+    assert "note" not in text.lower() and "persona" not in text.lower()  # Gemini gets no per-turn note
+    assert "one to three short sentences" in text and llm.warmed == 0
+    # the first shared test (gemini-live.md section 9): the latest turn's language, a language asked for holds, voice only
+    assert "latest sentence" in text and "for the rest of the call" in text and "no chat" in text
+    assert "spoken English" not in text  # orb's base rule would contradict "answer in the person's language"
+    assert c.get("/v1/sessions/nope-123/instructions").status_code in (400, 404)
+
+
+def test_gemini_only_refuses_an_orb_voice_session_and_never_warms(tmp_path):
+    llm = CountingLLM()
+    agent = DiscussionAgent(ScriptedReader([]), llm, load_source=lambda url: {"url": url, "error": "offline test"})
+    c = local(create_app(SessionStore({"discussion": agent}, save_dir=tmp_path), None, gemini_available=lambda: True,
+                         gemini_only=True))
+    assert c.get("/v1/models").json()["gemini"]["only"] is True
+    r = c.post("/v1/sessions", json={"topic": "T", "config": {"voice_mode": "orb", "stt_engine": "parakeet"}})
+    assert r.status_code == 400 and "Gemini Live only" in r.json()["error"]
+    sid = c.post("/v1/sessions", json={"topic": "T"}).json()["id"]  # a session with no config (the worker's PUT)
+    assert c.put(f"/v1/sessions/{sid}/config", json={"voice_mode": "gemini-live"}).status_code == 200
+    c.get("/v1/sessions")
+    assert llm.warmed == 0
