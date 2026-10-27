@@ -17,6 +17,10 @@ from orb_core import gemini
 
 log = logging.getLogger("orb.voice")
 
+# Hints for the caption of the person's words (gemini-live.md section 9): without them a short sound was captioned in
+# Italian or German. Other languages are still detected; the model itself hears the audio, not the caption.
+CAPTION_LANGUAGES = ["en-IN", "hi-IN", "gu-IN"]
+
 
 async def fetch_instructions(http: httpx.AsyncClient, agent_url: str, sid: str) -> str:
     """The session's system prompt for Gemini (agent service). Raises httpx.HTTPError when the service fails."""
@@ -34,7 +38,7 @@ def options(cfg: dict) -> dict:
         "model": model,
         "voice": voice,
         # the page shows what each side said: Gemini sends both transcripts
-        "input_audio_transcription": types.AudioTranscriptionConfig(),
+        "input_audio_transcription": types.AudioTranscriptionConfig(language_codes=CAPTION_LANGUAGES),
         "output_audio_transcription": types.AudioTranscriptionConfig(),
         # one connection lasts about 10 minutes and an audio session 15: a sliding window and resumption go past both
         "context_window_compression": types.ContextWindowCompressionConfig(sliding_window=types.SlidingWindow()),

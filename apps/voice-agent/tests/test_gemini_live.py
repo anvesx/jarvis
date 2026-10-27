@@ -20,7 +20,8 @@ def test_orbs_gemini_lists_are_the_plugins():
 def test_options_carry_the_session_choice_transcripts_and_long_call_settings():
     o = gemini_live.options({"gemini_model": "gemini-3.8-live-extended-thinking", "gemini_voice": "Kore"})
     assert (o["model"], o["voice"]) == ("gemini-3.8-live-extended-thinking", "Kore")
-    assert o["input_audio_transcription"] is not None and o["output_audio_transcription"] is not None
+    assert o["input_audio_transcription"].language_codes == ["en-IN", "hi-IN", "gu-IN"]  # captions: no Italian for "Mhm"
+    assert o["output_audio_transcription"] is not None
     assert o["context_window_compression"].sliding_window is not None and o["session_resumption"] is not None
     assert gemini_live.options({"gemini_model": "gpt-9", "gemini_voice": "Siri"})["model"] == gemini.DEFAULT_MODEL
     assert gemini_live.options({})["voice"] == gemini.DEFAULT_VOICE
