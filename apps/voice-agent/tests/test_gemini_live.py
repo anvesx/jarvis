@@ -27,10 +27,14 @@ def test_options_carry_the_session_choice_transcripts_and_long_call_settings():
     assert o["context_window_compression"].sliding_window is not None and o["session_resumption"] is not None
     assert gemini_live.options({"gemini_model": "gpt-9", "gemini_voice": "Siri"})["model"] == gemini.DEFAULT_MODEL
     assert gemini_live.options({})["voice"] == gemini.DEFAULT_VOICE
+    # extended thinking needs a level (the first shared test: 1007 "Thinking level must be specified"); 3.8 Live refuses one
+    assert o["thinking_config"].thinking_level.name == "LOW"
+    assert "thinking_config" not in gemini_live.options({"gemini_model": "gemini-3.8-live"})
 
 
 def test_the_model_is_built_without_connecting(monkeypatch):
     monkeypatch.setenv("GOOGLE_API_KEY", "fake-key-for-the-test")
+    gemini_live.make_model({"gemini_model": "gemini-3.8-live-extended-thinking"})  # the plugin accepts the level here
     m = gemini_live.make_model({"gemini_voice": "Kore"})
     assert m.model == "gemini-3.8-live" and m.capabilities.turn_detection and m.capabilities.user_transcription
 
@@ -44,6 +48,7 @@ def model_error(e: Exception) -> llm.RealtimeModelError:
     (Exception("received 1011 RESOURCE_EXHAUSTED: You exceeded your current quota"), "over its quota"),
     (Exception("1008 policy violation: models/gemini-9 is not found"), "does not accept this model"),
     (ConnectionError("[Errno 8] nodename nor servname provided, or not known"), "cannot be reached"),
+    (Exception("1007 None. Thinking level must be specified for this model."), "thinking level"),
     (RuntimeError("something new"), "voice worker log has the details"),
 ])
 def test_errors_become_a_message_that_says_what_to_do(error, says):

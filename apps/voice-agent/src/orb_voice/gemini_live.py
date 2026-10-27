@@ -34,7 +34,11 @@ def options(cfg: dict) -> dict:
     already refused them, so this happens only with an older session file)."""
     model = cfg.get("gemini_model") if cfg.get("gemini_model") in gemini.MODELS else gemini.DEFAULT_MODEL
     voice = cfg.get("gemini_voice") if cfg.get("gemini_voice") in gemini.VOICES else gemini.DEFAULT_VOICE
+    extra = {}
+    if model.endswith("-extended-thinking"):  # it refuses a session without a level (1007); the plain model refuses one
+        extra["thinking_config"] = types.ThinkingConfig(thinking_level=types.ThinkingLevel.LOW)
     return {
+        **extra,
         "model": model,
         "voice": voice,
         # the page shows what each side said: Gemini sends both transcripts
@@ -78,6 +82,8 @@ def explain(error: object) -> str:
     if any(s in text for s in ("not found", "not supported", "1008", "policy violation")):
         return ("Gemini Live does not accept this model for this key. Choose gemini-3.8-live, or check that the key "
                 "is a Gemini API key.")
+    if "thinking level" in text:
+        return "Gemini Live refused the model's settings (thinking level). Choose gemini-3.8-live and call again."
     if "1007" in text or "context exhausted" in text:
         return "The Gemini Live conversation got too long. Press New session and call again."
     if any(s in text for s in ("connecterror", "gaierror", "timeout", "connection refused", "network",

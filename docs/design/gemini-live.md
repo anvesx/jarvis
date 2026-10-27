@@ -211,3 +211,10 @@ Checked live (one tiny session, 2026-10-27): `gemini-3.8-live` accepts `input_au
 | GL-6 | Instructions: answer in the language of the person's latest turn; a language they ask for holds for the rest of the call; voice only (no chat, typing, files or links) | `VOICE_RULES` has the three rules; test of the instructions text |
 | GL-7 | Captions: `language_codes` en-IN, hi-IN, gu-IN for the input transcription (hints; other languages are still detected) | options test; one live call with "Mhm" captions no foreign words |
 | GL-8 | Turns: low start-of-speech sensitivity, 200 ms prefix, 700 ms silence, so a short "Mhm" does not cut a reply | options test; one live call: "Mhm" during a reply does not stop it |
+
+Second test (11:31, the owner): choosing `gemini-3.8-live-extended-thinking` failed at once with 1007 "Thinking level
+must be specified for this model" (the page said the conversation was too long). **GL-9:** the extended-thinking model
+gets `thinking_level` LOW (checked live: it answers); the plain model gets none (the plugin refuses one); the error
+message names the thinking level. The same test showed again that the caption and what Gemini understood can differ
+("stock and ending" captioned, "stop" understood): the caption is a separate transcription of the audio, not the
+model's input (section 10).
