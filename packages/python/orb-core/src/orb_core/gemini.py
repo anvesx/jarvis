@@ -15,7 +15,7 @@ VOICES = ("Achernar", "Achird", "Algenib", "Algieba", "Alnilam", "Aoede", "Auton
           "Enceladus", "Erinome", "Fenrir", "Gacrux", "Iapetus", "Kore", "Laomedeia", "Leda", "Orus", "Pulcherrima",
           "Puck", "Rasalgethi", "Sadachbia", "Sadaltager", "Schedar", "Sulafat", "Umbriel", "Vindemiatrix", "Zephyr",
           "Zubenelgenubi")
-DEFAULT_VOICE = "Puck"
+DEFAULT_VOICE = "Kore"  # a female voice (Google: "firm"); the owner asked for a female default
 KEY = "GOOGLE_API_KEY"
 
 # Added to orb's system prompt: Gemini speaks every word it writes, and no per-turn note comes (no personas).

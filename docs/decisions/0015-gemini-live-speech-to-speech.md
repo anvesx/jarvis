@@ -10,7 +10,7 @@ local model families (Whistle/Parakeet or Qwen3, gemma4:e2b, Kokoro), which swap
 ## Decision
 - **A second voice mode, chosen per session:** `voice_mode` is `orb` (the default, unchanged) or `gemini-live`. The
   call page has a Mode field first in its model bar; Gemini Live shows its model (`gemini-3.8-live`, or the extended
-  thinking one) and its voice (30 Gemini voices, default Puck).
+  thinking one) and its voice (30 Gemini voices, default Kore, a female voice).
 - **In Gemini Live, the voice worker runs `AgentSession(llm=google.realtime.RealtimeModel(...))` and nothing else**
   (livekit-plugins-google 1.8.9). Gemini detects the turns on its server; its two transcripts become the captions. The
   speech service, the orb agent's turns and Ollama are not used, so none of their models load (only the worker's small

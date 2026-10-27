@@ -59,7 +59,7 @@ browser ──LiveKit──▶ voice worker (AgentSession)
 | Gemini Live | `gemini-live` | Gemini | Gemini, with orb's system prompt | Gemini voice |
 
 The mode is fixed for a call, like the LLM is today (changing it applies to the next call). The session config
-gains `voice_mode` (default `orb`), `gemini_model` (default `gemini-3.8-live`) and `gemini_voice` (default `Puck`).
+gains `voice_mode` (default `orb`), `gemini_model` (default `gemini-3.8-live`) and `gemini_voice` (default `Kore`, a female voice).
 
 **What Gemini Live loses, on purpose, in this first version:** the Jev read, persona switching, the debt board and
 promise checks, replace_last undo, and the agent service's history of the call. The page says so in the mode's
@@ -84,7 +84,7 @@ else:
   LiveKit makes a default local VAD object but does not use it while the model detects the turns.
 - The same handlers run: `user_input_transcribed` → `transcript` events and the "You" caption;
   `conversation_item_added` and `agent_state_changed` as today. `agent_*` events of the agent service are silent.
-- The `session` event says `stt gemini · llm gemini-3.8-live · tts gemini (Puck)`.
+- The `session` event says `stt gemini · llm gemini-3.8-live · tts gemini (Kore)`.
 - A failed connection (no key, bad key, quota) becomes an `error` event with a clear message, as for the STT load:
   "Gemini Live did not start: the API key was refused. Check GOOGLE_API_KEY in .env." / "…quota or rate limit…" /
   "…no network…".

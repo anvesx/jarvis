@@ -403,7 +403,7 @@ def gemini_app(tmp_path, key: bool = True):
 def test_models_list_the_gemini_options_and_whether_the_key_is_set(tmp_path):
     c, _ = gemini_app(tmp_path)
     g = c.get("/v1/models").json()["gemini"]
-    assert g["available"] is True and g["default_model"] == "gemini-3.8-live" and g["default_voice"] == "Puck"
+    assert g["available"] is True and g["default_model"] == "gemini-3.8-live" and g["default_voice"] == "Kore"
     assert "gemini-3.8-live-extended-thinking" in g["models"] and "Kore" in g["voices"]
     assert gemini_app(tmp_path, key=False)[0].get("/v1/models").json()["gemini"]["available"] is False
 
