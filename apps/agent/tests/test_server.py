@@ -464,6 +464,8 @@ def test_instructions_are_orbs_prompt_without_the_note_rule_plus_the_voice_rules
     assert "Should we store passwords?" in text and "Change your view only when" in text
     assert "note" not in text.lower() and "persona" not in text.lower()  # Gemini gets no per-turn note
     assert "one to three short sentences" in text and llm.warmed == 0
+    # the first shared test (gemini-live.md section 9): the latest turn's language, a language asked for holds, voice only
+    assert "latest sentence" in text and "for the rest of the call" in text and "no chat" in text
     assert c.get("/v1/sessions/nope-123/instructions").status_code in (400, 404)
 
 

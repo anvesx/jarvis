@@ -189,3 +189,25 @@ only the voice worker's Silero VAD (about 2 MB), which LiveKit loads in every wo
 - **Cost and privacy:** about $0.023 per minute of talk; a free-tier key lets Google train on the audio. The page
   and the log say so; a real company call needs the owner's clearance first (as decision 0008).
 - **Rate limits** are per project and not published; a refused session gets the quota message.
+
+## 9. First shared test (2026-10-27) and the fixes it asks for
+
+Setup: `scripts/dev.sh --gemini` with LiveKit Cloud (`LIVEKIT_URL=wss://…livekit.cloud`; the local server gave no
+audio to a phone on 5G, decision 0009) and a Cloudflare quick tunnel for friends. One 5-minute call of the owner, read
+from `voice.log` with `ORB_LOG_TEXT=1`: 18 turns, no error, Gemini kept the context (it recalled the first topic).
+
+| # | Seen | Cause |
+|---|---|---|
+| 1 | Gemini answered in Gujarati script for the whole call, also when the owner switched to English | the rule "answer in the language the person speaks" fixed the first turn's language |
+| 2 | Short or unclear sounds were captioned as other languages: "Chiaramente buono." (Italian), "Mönchengladbach", "Marlon Brando" for a name; earlier "speak in English" came out as French | the input transcription detects the language again for every short piece; Gemini itself heard better (it used the owner's real name) |
+| 3 | "Mhm" cut Gemini off mid-sentence twice | server activity detection at its default (high) start sensitivity |
+| 4 | Gemini offered "type or paste the script in the chat" | it does not know the call is voice only |
+
+Checked live (one tiny session, 2026-10-27): `gemini-3.8-live` accepts `input_audio_transcription.language_codes` and
+`realtime_input_config.automatic_activity_detection` with a low start sensitivity.
+
+| Ticket | What | Done when |
+|---|---|---|
+| GL-6 | Instructions: answer in the language of the person's latest turn; a language they ask for holds for the rest of the call; voice only (no chat, typing, files or links) | `VOICE_RULES` has the three rules; test of the instructions text |
+| GL-7 | Captions: `language_codes` en-IN, hi-IN, gu-IN for the input transcription (hints; other languages are still detected) | options test; one live call with "Mhm" captions no foreign words |
+| GL-8 | Turns: low start-of-speech sensitivity, 200 ms prefix, 700 ms silence, so a short "Mhm" does not cut a reply | options test; one live call: "Mhm" during a reply does not stop it |
