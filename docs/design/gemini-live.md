@@ -73,7 +73,7 @@ if cfg.voice_mode == "gemini-live":
         model=cfg.gemini_model, voice=cfg.gemini_voice, instructions=instructions,
         input_audio_transcription=AudioTranscriptionConfig(), output_audio_transcription=AudioTranscriptionConfig(),
         context_window_compression=ContextWindowCompressionConfig(sliding_window=SlidingWindow()),
-        session_resumption=SessionResumptionConfig()), vad=vad)
+        session_resumption=SessionResumptionConfig()))  # no vad, stt, tts: Gemini detects the turns
 else:
     ...today's pipeline, unchanged...
 ```
@@ -81,7 +81,7 @@ else:
 - `instructions`: from the agent service (`GET /v1/sessions/{id}/instructions`, new): orb's system prompt for the
   session's topic and source, plus a voice rule ("speak in short turns, at most 3 sentences; no lists or markdown").
 - No STT load, no polish, no `LiveSTT`, no `OrbTTS`, no turn detector: Gemini detects turns on the server.
-  The local Silero VAD stays for the page's "Hearing you…" state only if LiveKit needs it; else it is dropped.
+  LiveKit makes a default local VAD object but does not use it while the model detects the turns.
 - The same handlers run: `user_input_transcribed` → `transcript` events and the "You" caption;
   `conversation_item_added` and `agent_state_changed` as today. `agent_*` events of the agent service are silent.
 - The `session` event says `stt gemini · llm gemini-3.8-live · tts gemini (Puck)`.
@@ -159,7 +159,7 @@ Tokens from `~/Developer/smartrouter/dashboard/src/styles.css`:
 |---|---|---|---|
 | GL-0 | Dependencies and key: livekit 1.8.9 + Google plugin, `GOOGLE_API_KEY` passthrough, `.env.example`, `check_stack.sh` | — | worker and agent tests pass on 1.8.9; key set → `check_stack` says so |
 | GL-1 | Agent service: `voice_mode`, `gemini_model`, `gemini_voice` in the session config; `gemini` in voice status; `/instructions` | GL-0 | `test_server.py` covers defaults, bad values, status without a key, instructions text |
-| GL-2 | Voice worker: Gemini Live branch, captions and bench events, error messages, cloud warning | GL-1 | `test_realtime.py` (fake RealtimeModel builder): options passed, no STT load, errors mapped; pipeline tests unchanged |
+| GL-2 | Voice worker: Gemini Live branch, captions and bench events, error messages, cloud warning | GL-1 | `test_gemini_live.py` (fake AgentSession): options passed, no STT load, errors mapped; pipeline tests unchanged |
 | GL-3 | Call page: Mode field, Gemini voice/model, cloud note, disabled reason | GL-1 | page works in both modes; no console errors |
 | GL-4 | Black-and-white UI and the padding / layout fixes | — | screenshots at 390 / 768 / 1280 px, dark and light |
 | GL-5 | Owner's live test (section 5) and a decision record 0015 | GL-2, GL-3 | numbers in this file |

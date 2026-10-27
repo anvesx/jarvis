@@ -25,6 +25,8 @@ from livekit.agents import tts as lk_tts
 from livekit.agents.voice.agent_session import SessionConnectOptions
 from livekit.plugins import silero
 
+from orb_core import gemini
+from orb_voice import gemini_live
 from orb_voice.config import Settings, check_livekit, load_repo_env, session_for
 from orb_voice.plugins import (FirstClauseTokenizer, LiveSTT, OrbLLM, OrbSTT, OrbTTS, TurnTracker, polish_text,
                                stt_engines_info)
@@ -130,6 +132,10 @@ async def entry(ctx: JobContext) -> None:
     http = httpx.AsyncClient(limits=httpx.Limits(max_keepalive_connections=8))
     ctx.add_shutdown_callback(http.aclose)
     cfg = await ensure_session(http, s.agent_url, sid)
+    bench = Bench(ctx.room)
+    if cfg.get("voice_mode") == "gemini-live":
+        await gemini_call(ctx, http, s, sid, cfg, bench)
+        return
     stt_engine = cfg.get("stt_engine") or s.stt_engine
     cloud_engines, default_stt = await stt_engines_info(http, s.speech_url)
     stt_name = stt_engine or default_stt or "default"
@@ -148,7 +154,6 @@ async def entry(ctx: JobContext) -> None:
                                            "tts": tts_opts["engine"] or "default",
                                            "llm": cfg.get("llm_model") or "default"})
 
-    bench = Bench(ctx.room)
     tracker = TurnTracker()
     debug_dir = str(Path(s.debug_audio_dir) / sid) if s.debug_audio_dir else ""
     if debug_dir:
@@ -177,16 +182,11 @@ async def entry(ctx: JobContext) -> None:
     )
 
     @session.on("agent_state_changed")
-    def _agent_state(ev) -> None:
+    def _played(ev) -> None:
         if ev.new_state == "speaking":
             tracker.played()
-        bench.send("agent_state", state=ev.new_state)
 
-    @session.on("user_state_changed")
-    def _user_state(ev) -> None:
-        bench.send("user_state", state=ev.new_state)
-
-    last_reply = {"text": ""}  # the agent's last words: context for the polish
+    last_reply = watch(session, bench, sid, s)  # the agent's last words: context for the polish
     polishing: set[asyncio.Task] = set()
 
     async def _polish(heard: str) -> None:
@@ -202,14 +202,46 @@ async def entry(ctx: JobContext) -> None:
                    ms=out["ms"])
 
     @session.on("user_input_transcribed")
+    def _polish_final(ev) -> None:
+        if ev.is_final and s.polish != "verbatim" and ev.transcript.strip():
+            task = asyncio.create_task(_polish(ev.transcript))
+            polishing.add(task)
+            task.add_done_callback(polishing.discard)
+
+    @session.on("error")
+    def _error(ev) -> None:
+        log.error("session error", extra={"session": sid, "error": str(getattr(ev, "error", ev))})
+        bench.send("error", error=str(getattr(ev, "error", ev)))
+
+    # a local engine loads now, while the room connects; a cloud one bills the silent call, so it is skipped
+    load = None if is_cloud else asyncio.create_task(batch.load())
+    await session.start(room=ctx.room, agent=Agent(instructions="The orb agent service writes every reply."))
+    stt_label = f"{stt_name}{' (cloud)' if is_cloud else ''}, interim {interim_name}"
+    bench.send("session", session=sid, stt=stt_label, llm=cfg.get("llm_model") or "default",
+               tts=tts_opts["engine"] or "default", voice=tts_opts["voice"] or "default", vad="silero",
+               turn="livekit-v1-mini")
+    if load:
+        report_stt_load(load, bench, sid, stt_name)
+
+
+def watch(session: AgentSession, bench: Bench, sid: str, s: Settings) -> dict:
+    """The handlers that both voice modes share: states, transcripts, metrics, latency. Returns {"text"}: the agent's
+    last words, kept up to date."""
+    last_reply = {"text": ""}
+
+    @session.on("agent_state_changed")
+    def _agent_state(ev) -> None:
+        bench.send("agent_state", state=ev.new_state)
+
+    @session.on("user_state_changed")
+    def _user_state(ev) -> None:
+        bench.send("user_state", state=ev.new_state)
+
+    @session.on("user_input_transcribed")
     def _transcribed(ev) -> None:
         if ev.is_final:
             log.info("user words", extra={"session": sid, "chars": len(ev.transcript),
                                           **({"text": ev.transcript} if s.log_text else {})})
-            if s.polish != "verbatim" and ev.transcript.strip():
-                task = asyncio.create_task(_polish(ev.transcript))
-                polishing.add(task)
-                task.add_done_callback(polishing.discard)
         bench.send("transcript", final=ev.is_final, text=ev.transcript)
 
     @session.on("metrics_collected")
@@ -235,20 +267,41 @@ async def entry(ctx: JobContext) -> None:
         log.info("false interruption: the agent resumes", extra={"session": sid})
         bench.send("false_interruption")
 
+    return last_reply
+
+
+async def gemini_call(ctx: JobContext, http: httpx.AsyncClient, s: Settings, sid: str, cfg: dict, bench: Bench) -> None:
+    """A Gemini Live call (docs/design/gemini-live.md): one Google model hears, thinks and speaks. The speech service,
+    the orb agent's turns and Ollama are not used, so none of their models load."""
+    opts = gemini_live.options(cfg)
+    log.warning("Gemini Live: the audio of this call goes to Google", extra={"session": sid, "model": opts["model"]})
+    try:
+        instructions = await gemini_live.fetch_instructions(http, s.agent_url, sid)
+    except (httpx.HTTPError, KeyError, ValueError) as e:  # the call still works, with orb's rules only
+        log.warning("Gemini Live: no session instructions, the voice rules only", extra={"session": sid, "error": str(e)})
+        instructions = gemini.VOICE_RULES.strip()
+    try:
+        session = AgentSession(llm=gemini_live.make_model(cfg))
+    except Exception as e:  # no key in the worker's environment, or a plugin that refuses the options
+        log.error("Gemini Live did not start", extra={"session": sid, "error": f"{type(e).__name__}: {e}"})
+        bench.send("error", error=gemini_live.explain(e))
+        return
+    watch(session, bench, sid, s)
+    failed = {"sent": False}
+
     @session.on("error")
     def _error(ev) -> None:
-        log.error("session error", extra={"session": sid, "error": str(getattr(ev, "error", ev))})
-        bench.send("error", error=str(getattr(ev, "error", ev)))
+        err = getattr(ev, "error", ev)
+        log.error("Gemini Live error", extra={"session": sid, "recoverable": getattr(err, "recoverable", None),
+                                              "error": str(getattr(err, "error", err))})
+        if getattr(err, "recoverable", False) or failed["sent"]:  # the plugin retries; one message is enough
+            return
+        failed["sent"] = True
+        bench.send("error", error=gemini_live.explain(err))
 
-    # a local engine loads now, while the room connects; a cloud one bills the silent call, so it is skipped
-    load = None if is_cloud else asyncio.create_task(batch.load())
-    await session.start(room=ctx.room, agent=Agent(instructions="The orb agent service writes every reply."))
-    stt_label = f"{stt_name}{' (cloud)' if is_cloud else ''}, interim {interim_name}"
-    bench.send("session", session=sid, stt=stt_label, llm=cfg.get("llm_model") or "default",
-               tts=tts_opts["engine"] or "default", voice=tts_opts["voice"] or "default", vad="silero",
-               turn="livekit-v1-mini")
-    if load:
-        report_stt_load(load, bench, sid, stt_name)
+    await session.start(room=ctx.room, agent=Agent(instructions=instructions))
+    bench.send("session", session=sid, stt="gemini (in the model)", llm=opts["model"], tts="gemini",
+               voice=opts["voice"], vad="gemini server", turn="gemini server")
 
 
 def main() -> None:
