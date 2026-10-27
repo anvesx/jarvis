@@ -67,8 +67,12 @@ source but never warms the LLM (gemma4:e2b is 7.9 GB, and the call does not use 
   the server passed on. The two `validate` pages are forwarded too. The target is fixed, the routes sit behind the gate,
   and LiveKit still checks the token. The clean-up of a connection is shielded from cancellation. The audio does not
   pass here: it goes straight between the device and the LiveKit server.
-- **The page** (`static/index.html`, no build step, one file served from disk): a model bar on top (STT, LLM, TTS,
-  voice, language, style; Silero and the LiveKit turn detector are shown as fixed), then five tabs.
+- **The page** (`static/index.html`, no build step, one file served from disk): a model bar on top (Mode, then STT, LLM,
+  TTS, voice, language, style; Silero and the LiveKit turn detector are shown as fixed), then five tabs. **Mode** is
+  "orb pipeline" or "Gemini Live (cloud)" (disabled, with the reason, without `GOOGLE_API_KEY`); Gemini Live shows its
+  model and voice instead of the pipeline's fields, a note that the audio goes to Google, and captions labelled Gemini.
+  The bar reads `/v1/models` first and on its own, so Gemini Live works when the speech service is not running. The page
+  remembers the mode in this browser (`orb-mode`).
   - **Talk** is the voice call. It has an orb (LiveKit's Aura visualizer, ported to the page: the shader and the state
     table are theirs, Apache-2.0, license and notice in `static/vendor/`), a status line, captions of what the STT
     heard and what the TTS speaks (LiveKit's `lk.transcription` text streams, each labelled with its model) and two

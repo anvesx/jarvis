@@ -203,12 +203,16 @@ audio { height: 32px; max-width: 260px; }
   </header>
 
   <section class="models" aria-label="Models">
-    <label class="field"><span class="eyebrow">Speech to text</span><select id="m-stt"></select></label>
-    <label class="field"><span class="eyebrow">LLM</span><select id="m-llm"></select></label>
-    <label class="field"><span class="eyebrow">Text to speech</span><select id="m-tts"></select></label>
-    <label class="field"><span class="eyebrow">Voice</span><input type="text" id="m-voice" list="voices" placeholder="default"><datalist id="voices"></datalist></label>
-    <label class="field"><span class="eyebrow">Language</span><input type="text" id="m-lang" list="langs" placeholder="default"><datalist id="langs"></datalist></label>
-    <label class="field"><span class="eyebrow">Style</span><input type="text" id="m-style" list="styles" placeholder="none"><datalist id="styles"></datalist></label>
+    <label class="field"><span class="eyebrow">Mode</span><select id="m-mode">
+      <option value="orb">orb pipeline</option><option value="gemini-live">Gemini Live (cloud)</option></select></label>
+    <label class="field gem" hidden><span class="eyebrow">Gemini model</span><select id="m-gmodel"></select></label>
+    <label class="field gem" hidden><span class="eyebrow">Gemini voice</span><select id="m-gvoice"></select></label>
+    <label class="field orbf"><span class="eyebrow">Speech to text</span><select id="m-stt"></select></label>
+    <label class="field orbf"><span class="eyebrow">LLM</span><select id="m-llm"></select></label>
+    <label class="field orbf"><span class="eyebrow">Text to speech</span><select id="m-tts"></select></label>
+    <label class="field orbf"><span class="eyebrow">Voice</span><input type="text" id="m-voice" list="voices" placeholder="default"><datalist id="voices"></datalist></label>
+    <label class="field orbf"><span class="eyebrow">Language</span><input type="text" id="m-lang" list="langs" placeholder="default"><datalist id="langs"></datalist></label>
+    <label class="field orbf"><span class="eyebrow">Style</span><input type="text" id="m-style" list="styles" placeholder="none"><datalist id="styles"></datalist></label>
     <div id="cloud-note" hidden></div>
     <div id="model-note" hidden><span id="note-text"></span></div>
   </section>
@@ -356,7 +360,7 @@ const PROMISES = ["Interaction", "Divergence", "Challenge", "Reflection", "Progr
 const WORDS = {Interaction: "Reply to the other side", Divergence: "More than one option", Challenge: "A reason for each claim",
                Reflection: "Change only for a reason", Progression: "No repeats, no stuck points", Resolution: "Close the points"};
 let S = null, room = null, poll = null;
-let engines = null, llmInfo = null;
+let engines = null, llmInfo = null, gemInfo = null;  // gemInfo: the Gemini Live options (/v1/models)
 
 async function api(path, opts = {}) {
   const r = await fetch(path, {headers: {"content-type": "application/json"}, ...opts});
@@ -382,14 +386,29 @@ function openTab(name) {
 document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => openTab(b.dataset.tab));
 
 // --- models: the bar, and the models of this chat ---
+function isGemini() { return $("m-mode").value === "gemini-live"; }
+function modeConfig() {  // the voice mode; a Gemini session starts without warming the local LLM (gemini-live.md)
+  return isGemini() ? {voice_mode: "gemini-live", gemini_model: $("m-gmodel").value, gemini_voice: $("m-gvoice").value}
+                    : {voice_mode: "orb"};
+}
 function config() {  // a new chat or a bench test: only the fields that are set (empty = the service default)
   const c = {stt_engine: $("m-stt").value, llm_model: $("m-llm").value, tts_engine: $("m-tts").value,
-             tts_voice: $("m-voice").value.trim(), tts_lang: $("m-lang").value.trim(), tts_style: $("m-style").value.trim()};
+             tts_voice: $("m-voice").value.trim(), tts_lang: $("m-lang").value.trim(), tts_style: $("m-style").value.trim(),
+             ...modeConfig()};
   return Object.fromEntries(Object.entries(c).filter(([, v]) => v));
 }
 function voiceConfig() {  // for a running chat: every STT and TTS field, so an emptied field goes back to the default
   return {stt_engine: $("m-stt").value, tts_engine: $("m-tts").value, tts_voice: $("m-voice").value.trim(),
-          tts_lang: $("m-lang").value.trim(), tts_style: $("m-style").value.trim()};
+          tts_lang: $("m-lang").value.trim(), tts_style: $("m-style").value.trim(), ...modeConfig()};
+}
+function showMode() {  // Gemini Live hides the orb pipeline's fields: one Google model hears, thinks and speaks
+  const g = isGemini();
+  document.querySelectorAll(".models .gem").forEach((el) => el.hidden = !g);
+  document.querySelectorAll(".models .orbf, .chip.fixed").forEach((el) => el.hidden = g);  // Silero and v1-mini: orb only
+  cloudNote(); capLabels();
+  if (!g && !engines) note("The speech service is not reachable, so the orb pipeline cannot hear or speak. Start scripts/dev.sh without --gemini.");
+  else if (g) note("");
+  try { localStorage.setItem("orb-mode", $("m-mode").value); } catch (e) {}
 }
 function fillVoices() {
   // the voices, styles and languages of the chosen engine; a value that the engine does not have is cleared
@@ -401,33 +420,53 @@ function fillVoices() {
     if (cur && v.length && !v.some((x) => x.toLowerCase() === cur) && !(key === "voices" && e === "maya1")) $(field).value = "";
   }
 }
-function cloudNote() {  // the STT engine of the bar sends the audio of a call to another company
-  const e = $("m-stt").value, cloud = (engines?.stt?.cloud || []).includes(e);
-  $("cloud-note").hidden = !cloud;
-  $("cloud-note").textContent = cloud ? `${e} is a cloud service: the audio of your call is sent to it, and it bills for each second of audio.` : "";
+function cloudNote() {  // the STT engine of the bar, or Gemini Live, sends the audio of a call to another company
+  const e = $("m-stt").value, cloud = !isGemini() && (engines?.stt?.cloud || []).includes(e);
+  const text = isGemini() ? "Gemini Live sends the audio of your call to Google, which bills for each minute. Jev, the personas and the debt board are off in this mode."
+    : cloud ? `${e} is a cloud service: the audio of your call is sent to it, and it bills for each second of audio.` : "";
+  $("cloud-note").hidden = !text; $("cloud-note").textContent = text;
 }
 async function loadModels() {
+  try {  // first, and on its own: a Gemini Live call needs neither the speech service nor Ollama
+    const m = await api("/v1/models");
+    llmInfo = m.llm; gemInfo = m.gemini || null;
+    $("m-llm").innerHTML = (llmInfo.installed.length ? llmInfo.installed : [llmInfo.default]).map((x) =>
+      `<option ${x === llmInfo.default ? "selected" : ""}>${esc(x)}</option>`).join("");
+    const g = gemInfo || {models: [], voices: [], available: false};
+    $("m-gmodel").innerHTML = g.models.map((x) => `<option ${x === g.default_model ? "selected" : ""}>${esc(x)}</option>`).join("");
+    $("m-gvoice").innerHTML = g.voices.map((x) => `<option ${x === g.default_voice ? "selected" : ""}>${esc(x)}</option>`).join("");
+    const opt = $("m-mode").querySelector('option[value="gemini-live"]');
+    opt.disabled = !g.available;
+    opt.textContent = g.available ? "Gemini Live (cloud)" : "Gemini Live (set GOOGLE_API_KEY)";
+    let saved = ""; try { saved = localStorage.getItem("orb-mode") || ""; } catch (e) {}
+    $("m-mode").value = saved === "gemini-live" && g.available ? "gemini-live" : "orb";
+    showMode();
+  } catch (e) { note("The agent service is not reachable: " + e.message); }
   try {
     engines = await api("/v1/speech/engines");
-    llmInfo = (await api("/v1/models")).llm;
     const cloud = engines.stt.cloud || [], off = engines.stt.unavailable || {};
     $("m-stt").innerHTML = engines.stt.engines.map((e) => `<option value="${esc(e)}" title="${esc(off[e] || "")}" ${off[e] ? "disabled" : ""}
       ${e === engines.stt.model ? "selected" : ""}>${esc(e + (cloud.includes(e) ? (off[e] ? " (cloud, not set up)" : " (cloud)") : ""))}</option>`).join("");
     $("m-tts").innerHTML = engines.tts.engines.map((e) => `<option ${e === engines.tts.model ? "selected" : ""}>${esc(e)}</option>`).join("");
-    $("m-llm").innerHTML = (llmInfo.installed.length ? llmInfo.installed : [llmInfo.default]).map((m) =>
-      `<option ${m === llmInfo.default ? "selected" : ""}>${esc(m)}</option>`).join("");
     // a cloud engine sends the audio to another company and bills for it: it starts unchecked
     $("stt-engines").innerHTML = engines.stt.engines.map((e) =>
       `<label class="mono" title="${esc(off[e] || "")}"><input type="checkbox" value="${esc(e)}" ${cloud.includes(e) ? "" : "checked"}
       ${off[e] ? "disabled" : ""}> ${esc(e)}${cloud.includes(e) ? " (cloud: sends the audio away)" : ""}</label>`).join("");
     fillVoices(); cloudNote();
-  } catch (e) { note("The speech service or the agent service is not reachable: " + e.message); }
+  } catch (e) {  // Gemini Live works without it; the orb pipeline does not
+    if (!isGemini()) note("The speech service is not reachable: " + e.message + ". Gemini Live works without it.");
+  }
 }
 function sessionLlm() { return S?.config?.llm_model || llmInfo?.default || ""; }
 function showSessionModels() {
   capLabels();
   if (!S) { $("c-session").hidden = true; return; }
-  const c = S.config || {}, voice = c.tts_voice ? ` (${c.tts_voice.length > 20 ? c.tts_voice.slice(0, 20) + "…" : c.tts_voice})` : "";
+  const c = S.config || {};
+  if (c.voice_mode === "gemini-live") {
+    $("c-session").textContent = `this session: Gemini Live · ${c.gemini_model || gemInfo?.default_model || "default"} · voice ${c.gemini_voice || gemInfo?.default_voice || "default"}`;
+    $("c-session").hidden = false; return;
+  }
+  const voice = c.tts_voice ? ` (${c.tts_voice.length > 20 ? c.tts_voice.slice(0, 20) + "…" : c.tts_voice})` : "";
   $("c-session").textContent = `this session: stt ${c.stt_engine || engines?.stt?.model || "default"} · llm ${sessionLlm()} · tts ${c.tts_engine || engines?.tts?.model || "default"}${voice}`;
   $("c-session").hidden = false;
 }
@@ -435,8 +474,9 @@ function note(text) { $("model-note").hidden = !text; $("note-text").textContent
 async function barChanged(e) {
   if (e?.target?.id === "m-tts") fillVoices();
   if (e?.target?.id === "m-stt") cloudNote();
+  if (e?.target?.id === "m-mode") showMode();
   if (!S) { note(""); return; }  // no session yet: the bar applies when you press Talk
-  const llmDiffers = $("m-llm").value && $("m-llm").value !== sessionLlm();
+  const llmDiffers = !isGemini() && $("m-llm").value && $("m-llm").value !== sessionLlm();  // Gemini uses no local LLM
   try {
     S.config = await api(`/v1/sessions/${encodeURIComponent(S.id)}/config`, {method: "PUT", body: JSON.stringify(voiceConfig())});
     showSessionModels();
@@ -444,7 +484,7 @@ async function barChanged(e) {
     else note(room ? "The new speech models apply when you press Talk again." : "");
   } catch (err) { note("The models did not change: " + err.message); }
 }
-["m-stt", "m-llm", "m-tts", "m-voice", "m-lang", "m-style"].forEach((id) => $(id).addEventListener("change", barChanged));
+["m-mode", "m-gmodel", "m-gvoice", "m-stt", "m-llm", "m-tts", "m-voice", "m-lang", "m-style"].forEach((id) => $(id).addEventListener("change", barChanged));
 
 // --- chat ---
 const LOCAL_HOSTS = ["127.0.0.1", "localhost", "[::1]", "::1"];
@@ -906,6 +946,11 @@ function showCap(who, text, interim) {
 function clearCaps() { cap.youSeg = cap.agentSeg = cap.agentText = ""; showCap("you", "", false); showCap("agent", "", false); }
 function capLabels() {  // which model made which text: useful when you compare models
   const c = (S && S.config) || {};
+  if ((S ? c.voice_mode : modeConfig().voice_mode) === "gemini-live") {
+    $("cap-you-who").textContent = "You · heard by Gemini";
+    $("cap-agent-who").textContent = "Agent · Gemini, voice " + (c.gemini_voice || $("m-gvoice").value || "default");
+    return;
+  }
   $("cap-you-who").textContent = "You · heard by " + (c.stt_engine || (engines && engines.stt && engines.stt.model) || "the STT");
   $("cap-agent-who").textContent = "Agent · spoken by " + (c.tts_engine || (engines && engines.tts && engines.tts.model) || "the TTS");
 }
