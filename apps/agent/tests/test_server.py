@@ -465,3 +465,17 @@ def test_instructions_are_orbs_prompt_without_the_note_rule_plus_the_voice_rules
     assert "note" not in text.lower() and "persona" not in text.lower()  # Gemini gets no per-turn note
     assert "one to three short sentences" in text and llm.warmed == 0
     assert c.get("/v1/sessions/nope-123/instructions").status_code in (400, 404)
+
+
+def test_gemini_only_refuses_an_orb_voice_session_and_never_warms(tmp_path):
+    llm = CountingLLM()
+    agent = DiscussionAgent(ScriptedReader([]), llm, load_source=lambda url: {"url": url, "error": "offline test"})
+    c = local(create_app(SessionStore({"discussion": agent}, save_dir=tmp_path), None, gemini_available=lambda: True,
+                         gemini_only=True))
+    assert c.get("/v1/models").json()["gemini"]["only"] is True
+    r = c.post("/v1/sessions", json={"topic": "T", "config": {"voice_mode": "orb", "stt_engine": "parakeet"}})
+    assert r.status_code == 400 and "Gemini Live only" in r.json()["error"]
+    sid = c.post("/v1/sessions", json={"topic": "T"}).json()["id"]  # a session with no config (the worker's PUT)
+    assert c.put(f"/v1/sessions/{sid}/config", json={"voice_mode": "gemini-live"}).status_code == 200
+    c.get("/v1/sessions")
+    assert llm.warmed == 0

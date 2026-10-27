@@ -136,6 +136,14 @@ Tokens from `~/Developer/smartrouter/dashboard/src/styles.css`:
   uneven padding; header chips wrap under the title on phones. Each is checked at 390, 768 and 1280 px.
 - Not in scope: new layouts, new components, the bench tabs' logic.
 
+### 3.7 A run for Gemini Live only
+
+`scripts/dev.sh --gemini` starts LiveKit, the agent service and the voice worker, and neither the speech service nor
+Ollama (an Ollama that already runs stays idle). The agent service gets `ORB_GEMINI_ONLY=1`: `/v1/models` says
+`gemini.only`, a voice session that asks for the orb pipeline gets 400 with what to do, and no session warms the LLM.
+The page then offers only Gemini Live. So on this 16 GB Mac a Gemini test loads no Parakeet, Kokoro, Qwen3 or LLM:
+only the voice worker's Silero VAD (about 2 MB), which LiveKit loads in every worker process.
+
 ## 4. Rules
 
 - orb pipeline stays the default; with `voice_mode` unset nothing changes (tests prove it).
@@ -162,7 +170,7 @@ Tokens from `~/Developer/smartrouter/dashboard/src/styles.css`:
 | GL-2 | Voice worker: Gemini Live branch, captions and bench events, error messages, cloud warning | GL-1 | `test_gemini_live.py` (fake AgentSession): options passed, no STT load, errors mapped; pipeline tests unchanged |
 | GL-3 | Call page: Mode field, Gemini voice/model, cloud note, disabled reason | GL-1 | page works in both modes; no console errors |
 | GL-4 | Black-and-white UI and the padding / layout fixes | — | screenshots at 390 / 768 / 1280 px, dark and light |
-| GL-5 | Owner's live test (section 5) and a decision record 0015 | GL-2, GL-3 | numbers in this file |
+| GL-5 | `dev.sh --gemini` (3.7), decision record 0015, then the owner's live test (section 5) | GL-2, GL-3 | the run loads no local model; numbers in this file |
 
 ## 7. Later (not in this work)
 

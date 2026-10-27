@@ -38,7 +38,9 @@ description), `tts_style` and `tts_lang`. The service checks `llm_model` against
 speech service checks the rest when the voice worker uses them. Gemini Live (docs/design/gemini-live.md):
 `voice_mode` (`orb` or `gemini-live`), `gemini_model` and `gemini_voice`, checked against `orb_core.gemini`; a
 `gemini-live` config without `GOOGLE_API_KEY` gets 400 with what to do. A session that starts in `gemini-live` loads its
-source but never warms the LLM (gemma4:e2b is 7.9 GB, and the call does not use it).
+source but never warms the LLM (gemma4:e2b is 7.9 GB, and the call does not use it). With `ORB_GEMINI_ONLY=1`
+(`scripts/dev.sh --gemini`) a voice config that asks for the orb pipeline gets 400, no session warms the LLM, and
+`/v1/models` says `gemini.only` (the page then offers only Gemini Live).
 
 ## 2. Algorithm
 - **Start:** load settings (`orb_core.config.bootstrap`), make the Jev reader and the Ollama client, build the

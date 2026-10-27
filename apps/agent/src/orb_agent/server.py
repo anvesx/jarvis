@@ -75,13 +75,15 @@ class VoiceIn(BaseModel):
 def create_app(store: SessionStore, voice: VoiceConfig | None = None, *, model_agent=None, installed_models=None,
                default_model: str = "", speech_url: str | None = None, self_url: str = "http://127.0.0.1:8100",
                share_key: str | None = None, probe=None, worker_port: int | None = None, livekit_probe=None,
-               gemini_available=gemini.available) -> FastAPI:
+               gemini_available=gemini.available, gemini_only: bool = False) -> FastAPI:
     """`model_agent(model)` makes an agent that uses another LLM; `installed_models()` lists the models it may use.
     With `speech_url`, the bench API (bench.py) is on too. `share_key` lets a remote request in (access.py).
     `probe(host, port)` says whether a server listens there: with it, the voice status tells whether the LiveKit server
     and the voice worker (on `worker_port`) run. `livekit_probe(url)` checks the LiveKit server by its address instead
     (a tunnel accepts a connection also when no server is behind it). Without a probe, the status does not check.
-    `gemini_available()` says whether the Gemini key is set (the "gemini-live" voice mode needs it)."""
+    `gemini_available()` says whether the Gemini key is set (the "gemini-live" voice mode needs it). `gemini_only`
+    (`scripts/dev.sh --gemini`): the speech service and the LLM are not meant to run, so a voice session must be
+    gemini-live and no session warms the LLM."""
     app = FastAPI(title="orb agent", docs_url=None, redoc_url=None)
     app.add_middleware(AccessMiddleware, key=check_key(share_key))  # checked here: Starlette makes the middleware at the first request
     proxy = voice is not None and is_local(voice.server)  # a LiveKit server on this computer: its signal goes through this service too
@@ -131,6 +133,9 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None, *, model_a
         why = gemini.check(config.voice_mode, config.gemini_model, config.gemini_voice)
         if why:
             raise HTTPException(400, why)
+        if gemini_only and config.voice_mode != "gemini-live" and (config.voice_mode or config.stt_engine or config.tts_engine):
+            raise HTTPException(400, "This orb runs for Gemini Live only (scripts/dev.sh --gemini): choose Mode > "
+                                     "Gemini Live, or restart scripts/dev.sh without --gemini for the orb pipeline.")
         if config.voice_mode == "gemini-live" and not gemini_available():
             raise HTTPException(400, f"Gemini Live needs {gemini.KEY} in the repo .env (a Gemini API key). "
                                      "Set it and restart scripts/dev.sh.")
@@ -139,7 +144,7 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None, *, model_a
     def started(s, config: dict):
         # a Gemini Live call never uses the LLM of the session: warming it would load gigabytes for nothing
         if hasattr(s, "prepare"):
-            later(s.prepare(warm=config.get("voice_mode") != "gemini-live"))
+            later(s.prepare(warm=config.get("voice_mode") != "gemini-live" and not gemini_only))
         return s
 
     async def save_after(s):
@@ -197,7 +202,7 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None, *, model_a
     @app.get("/v1/models")
     async def models():
         return {"llm": {"default": default_model, "installed": await installed_models() if installed_models else []},
-                "gemini": {"available": gemini_available(), "models": gemini.MODELS, "default_model": gemini.DEFAULT_MODEL,
+                "gemini": {"available": gemini_available(), "only": gemini_only, "models": gemini.MODELS, "default_model": gemini.DEFAULT_MODEL,
                            "voices": gemini.VOICES, "default_voice": gemini.DEFAULT_VOICE}}
 
     @app.put("/v1/sessions/{sid}/config")
@@ -300,7 +305,7 @@ def build() -> FastAPI:
                       speech_url=os.environ.get("ORB_SPEECH_URL", "http://127.0.0.1:8200"),
                       self_url=f"http://127.0.0.1:{port}", share_key=os.environ.get("ORB_SHARE_KEY"),
                       probe=listening, worker_port=int(os.environ.get("ORB_VOICE_PORT", "8081")),
-                      livekit_probe=livekit_answers)
+                      livekit_probe=livekit_answers, gemini_only=os.environ.get("ORB_GEMINI_ONLY") == "1")
 
 
 def main():

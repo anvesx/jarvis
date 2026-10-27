@@ -4,6 +4,9 @@
 #   scripts/dev.sh              # all services, then open http://127.0.0.1:8100
 #   scripts/dev.sh --no-voice   # only the agent service and Ollama (text chat)
 #   scripts/dev.sh --no-tunnel  # no ngrok, also when ORB_NGROK_DOMAIN is set
+#   scripts/dev.sh --gemini     # Gemini Live only: LiveKit, the agent service and the voice worker. No speech service
+#                               # and no Ollama start, so no local model loads (docs/design/gemini-live.md). The orb
+#                               # pipeline mode cannot hear or speak in this run.
 #
 # Logs go to data/logs/<service>.log. Every service listens on 127.0.0.1 only.
 #
@@ -23,11 +26,13 @@ export JEV_ENV_FILE="${JEV_ENV_FILE:-$HOME/jev-test/.env}"
 export NEEDLE_TELEMETRY=0
 VOICE=1
 TUNNEL=1
+LOCAL_MODELS=1
 for arg in "$@"; do
   case "$arg" in
     --no-voice) VOICE=0 ;;
     --no-tunnel) TUNNEL=0 ;;
-    *) echo "Unknown option: $arg. Use --no-voice or --no-tunnel." >&2; exit 2 ;;
+    --gemini) LOCAL_MODELS=0 ;;
+    *) echo "Unknown option: $arg. Use --no-voice, --no-tunnel or --gemini." >&2; exit 2 ;;
   esac
 done
 
@@ -113,12 +118,15 @@ wait_for() { # name url seconds
 
 if curl -s -m 2 -o /dev/null http://127.0.0.1:11434/api/tags; then
   echo "found   ollama (already running)"
+elif (( ! LOCAL_MODELS )); then
+  echo "skipped ollama (--gemini: a Gemini Live call does not use it)"
 else
   start ollama 11434 ollama serve
   wait_for ollama http://127.0.0.1:11434/api/tags 30
 fi
 
-start agent 8100 "$PY" -m orb_agent.server
+# --gemini: the agent service offers only Gemini Live and never warms the LLM (ORB_GEMINI_ONLY)
+start agent 8100 env ORB_GEMINI_ONLY="$((1 - LOCAL_MODELS))" "$PY" -m orb_agent.server
 if (( VOICE )); then
   LK_URL="$(setting LIVEKIT_URL)"; LK_URL="${LK_URL:-ws://127.0.0.1:7880}"
   LK_KEY="$(setting LIVEKIT_API_KEY)"; LK_SECRET="$(setting LIVEKIT_API_SECRET)"
@@ -146,9 +154,13 @@ if (( VOICE )); then
       fi ;;
   esac
   # The models are on disk after `make models`, so the speech service needs no network.
-  start speech 8200 env HF_HUB_OFFLINE=1 "$PY" -m orb_speech.server
+  if (( LOCAL_MODELS )); then
+    start speech 8200 env HF_HUB_OFFLINE=1 "$PY" -m orb_speech.server
+  else
+    echo "skipped speech service (--gemini: Parakeet and Kokoro stay unloaded)"
+  fi
   if [[ "$LK_MODE" != elsewhere ]]; then wait_for livekit http://127.0.0.1:7880 20; fi
-  wait_for speech http://127.0.0.1:8200/health 60
+  if (( LOCAL_MODELS )); then wait_for speech http://127.0.0.1:8200/health 60; fi
   # The voice worker (LiveKit Agents) joins every new room. In the dev mode it uses the dev server's public
   # credentials. Otherwise it reads LIVEKIT_API_KEY and LIVEKIT_API_SECRET from the environment or .env, and it
   # connects out from this computer (it needs no open port).
@@ -176,6 +188,7 @@ fi
 
 echo
 echo "orb is running. Open http://127.0.0.1:8100 . Press Ctrl+C to stop."
+if (( ! LOCAL_MODELS )); then echo "Gemini Live only: choose Mode > Gemini Live in the model bar."; fi
 if [[ -n "$NGROK_DOMAIN" ]]; then
   echo "Shared at https://$NGROK_DOMAIN : open it once as /?key=<ORB_SHARE_KEY> on each device (a browser first shows ngrok's notice)."
   echo "Audio needs a network path from the device to this computer (the same network): decision 0009."

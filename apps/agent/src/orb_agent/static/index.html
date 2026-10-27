@@ -448,7 +448,11 @@ async function loadModels() {
     opt.disabled = !g.available;
     opt.textContent = g.available ? "Gemini Live (cloud)" : "Gemini Live (set GOOGLE_API_KEY)";
     let saved = ""; try { saved = localStorage.getItem("orb-mode") || ""; } catch (e) {}
-    $("m-mode").value = saved === "gemini-live" && g.available ? "gemini-live" : "orb";
+    $("m-mode").value = (saved === "gemini-live" || g.only) && g.available ? "gemini-live" : "orb";
+    const orbOpt = $("m-mode").querySelector('option[value="orb"]');  // dev.sh --gemini: no speech service, no LLM
+    orbOpt.disabled = !!g.only;
+    orbOpt.textContent = g.only ? "orb pipeline (off: started with --gemini)" : "orb pipeline";
+    if (g.only && !g.available) note("This orb runs for Gemini Live only, and GOOGLE_API_KEY is not set: set it in .env and restart scripts/dev.sh --gemini.");
     showMode();
   } catch (e) { note("The agent service is not reachable: " + e.message); }
   try {
