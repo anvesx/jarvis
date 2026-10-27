@@ -91,17 +91,13 @@ main { min-height: 0; }
 /* the talk tab: an orb (LiveKit's Aura visualizer), the state in words, and two buttons; the details are folded away */
 #tab-chat { height: 100%; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 24px 24px 40px; }
 #stage { display: grid; justify-items: center; gap: 18px; width: 100%; max-width: 640px; padding-top: 8px; }
-.orb { --orb-size: clamp(170px, min(36vh, 70vw), 380px); width: var(--orb-size); height: var(--orb-size); position: relative; }
-.buddy { display: block; width: 100%; height: 100%; overflow: visible; }
-#bd-glow { opacity: .55; }
-#bd-shine { fill: #FFFFFF; opacity: .45; }
-.bd-white { fill: #FFFFFF; }
-.bd-pupil circle:first-child { fill: #0B0B14; }
-.bd-glint { fill: #FFFFFF; }
-.bd-cheek { fill: #FF5C93; opacity: .35; }
-#bd-mouth { fill: #2A0F3D; stroke: #2A0F3D; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-#bd-shadow { fill: var(--ink); opacity: .08; }
-#bd-dots circle { fill: var(--ink); opacity: 0; }
+.orb { --orb-size: clamp(170px, min(36vh, 70vw), 380px); width: var(--orb-size); height: var(--orb-size); position: relative; border-radius: 50%; }
+.orb canvas { display: block; width: 100%; height: 100%; }
+.orb.no-webgl { background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--ink) 90%, transparent), color-mix(in srgb, var(--ink) 30%, transparent) 40%, transparent 68%);
+                animation: orb-breathe 3s ease-in-out infinite; }
+.orb.no-webgl[data-state="thinking"], .orb.no-webgl[data-state="connecting"], .orb.no-webgl[data-state="initializing"] { animation-duration: .8s; }
+.orb.no-webgl[data-state="speaking"] { animation-duration: .5s; }
+@keyframes orb-breathe { 50% { transform: scale(1.06); opacity: .8; } }
 .captions { display: grid; gap: 12px; width: 100%; max-width: 62ch; text-align: center; min-height: 7.5em; align-content: start; }
 .cap { display: grid; gap: 2px; justify-items: center; }
 .cap-who { font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-2); }
@@ -120,6 +116,7 @@ main { min-height: 0; }
 #chat { min-width: 0; border-right: 1px solid var(--rule); background: var(--bg); }
 #log { max-height: 70vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
 #side { min-width: 0; max-height: 70vh; overflow-y: auto; padding: 20px; display: grid; gap: 24px; align-content: start; background: var(--surface); }
+@media (prefers-reduced-motion: reduce) { .orb.no-webgl { animation: none; } }
 .msg { max-width: 72ch; display: grid; gap: 4px; }
 .msg .who { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .msg .who b { color: var(--accent); font-weight: 500; }
@@ -241,30 +238,7 @@ audio { height: 32px; max-width: 260px; }
     <!-- Talk: an orb and two buttons. A session starts by itself when you press Talk. -->
     <div class="panel" id="tab-chat">
       <section id="stage" aria-label="Talk to the agent">
-        <div id="orb" class="orb" data-state="idle" role="img" aria-label="Voice orb: Press Talk to start">
-          <svg class="buddy" viewBox="0 0 200 200" aria-hidden="true">
-            <defs>
-              <radialGradient id="bd-fill" cx="32%" cy="28%" r="85%">
-                <stop offset="0" stop-color="#FFE7A3"/><stop offset=".3" stop-color="#FF8FB8"/>
-                <stop offset=".62" stop-color="#9B7BFF"/><stop offset="1" stop-color="#4C8DFF"/>
-              </radialGradient>
-              <filter id="bd-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="16"/></filter>
-            </defs>
-            <ellipse id="bd-shadow" cx="100" cy="178" rx="44" ry="6"/>
-            <g id="bd-all">
-              <path id="bd-glow" fill="url(#bd-fill)" filter="url(#bd-blur)"/>
-              <path id="bd-body" fill="url(#bd-fill)"/>
-              <ellipse id="bd-shine" cx="74" cy="66" rx="17" ry="9" transform="rotate(-28 74 66)"/>
-              <g id="bd-face">
-                <g id="bd-eye-l" transform="translate(82 98)"><ellipse class="bd-white" rx="11" ry="14"/><g class="bd-pupil"><circle r="6.5"/><circle class="bd-glint" cx="2.4" cy="-2.6" r="2"/></g></g>
-                <g id="bd-eye-r" transform="translate(118 98)"><ellipse class="bd-white" rx="11" ry="14"/><g class="bd-pupil"><circle r="6.5"/><circle class="bd-glint" cx="2.4" cy="-2.6" r="2"/></g></g>
-                <ellipse class="bd-cheek" cx="66" cy="116" rx="7" ry="4"/><ellipse class="bd-cheek" cx="134" cy="116" rx="7" ry="4"/>
-                <path id="bd-mouth"/>
-              </g>
-            </g>
-            <g id="bd-dots"><circle cx="146" cy="42" r="4.5"/><circle cx="160" cy="34" r="4.5"/><circle cx="174" cy="26" r="4.5"/></g>
-          </svg>
-        </div>
+        <div id="orb" class="orb" data-state="idle" role="img" aria-label="Voice orb: Press Talk to start"><canvas id="orb-canvas"></canvas></div>
         <div id="orb-state" class="orb-state" role="status" aria-live="polite">Press Talk to start</div>
         <div id="captions" class="captions" role="region" aria-label="Captions">
           <div class="cap you" title="What the speech-to-text heard"><span class="cap-who" id="cap-you-who">You</span><span class="cap-text" id="cap-you"></span></div>
@@ -641,37 +615,276 @@ function renderSide() {
 }
 function render() { renderLog(); renderSide(); showSessionModels(); }
 
-// --- the orb: a small character that shows the state of the call (SVG, no WebGL, light on a shared GPU) ---
-// A gradient body that breathes, two eyes that blink and look, a mouth that moves with the agent's voice:
-//   idle: blinks and follows the pointer · connecting: looks around · listening: watches the captions and swells with
-//   your voice · thinking: looks up while three dots bounce · speaking: the mouth and the body follow the agent's volume.
-const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const ORB_FPS = 30, ORB_IDLE_FPS = 20;
-const ORB_LOOK_OF = {idle: "idle", connecting: "connecting", initializing: "connecting", thinking: "thinking", listening: "listening", speaking: "speaking"};
-// per look: wobble of the outline, its speed, the bob, where the eyes look (-1..1), how open they are, the dots
-const BUDDY_LOOKS = {
-  idle:       {wobble: .018, speed: .7, bob: 3, gaze: null, open: 1, dots: 0},
-  connecting: {wobble: .045, speed: 2.2, bob: 2, gaze: "scan", open: 1, dots: 1},
-  listening:  {wobble: .022, speed: 1, bob: 1.5, gaze: [0, .45], open: 1.12, dots: 0},
-  thinking:   {wobble: .04, speed: 1.6, bob: 2, gaze: [.55, -.7], open: .9, dots: 1},
-  speaking:   {wobble: .025, speed: 1.4, bob: 2, gaze: [0, .1], open: .82, dots: 0},
-};
-const ease = (v, to, k, dt) => v + (to - v) * (1 - Math.exp(-k * dt));
-function blobPath(cx, cy, r, wobble, t, sx = 1, sy = 1) {  // a smooth closed curve through 10 moving points
-  const n = 10, pts = [];
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2;
-    const k = 1 + wobble * (Math.sin(t * 1.3 + i * 1.2) + 0.4 * Math.sin(t * 2.1 + i * 2.3));  // low: a round body
-    pts.push([cx + Math.cos(a) * r * k * sx, cy + Math.sin(a) * r * k * sy]);
-  }
-  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-  for (let i = 0; i < n; i++) {  // Catmull-Rom to cubic Bezier
-    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
-    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6], c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
-    d += ` C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
-  }
-  return d + "Z";
+// --- the orb: LiveKit's Aura audio visualizer, ported to plain JavaScript ---
+// Source: github.com/livekit/components-js, commit 1ce6ca0025 (Apache-2.0, Copyright LiveKit, Inc.; LiveKit designed the
+// visual in partnership with Unicorn Studio). The GLSL shader is from packages/shadcn/components/agents-ui/
+// agent-audio-visualizer-aura.tsx. The motion of each agent state (the table in ORB_LOOKS) is from hooks/agents-ui/
+// use-agent-audio-visualizer-aura.ts. License and notice: static/vendor/LICENSE-livekit-components-js.txt and
+// NOTICE-livekit-components-js.txt.
+// Changes: plain WebGL and requestAnimationFrame in place of React, ReactShaderToy and Motion; the volume comes from a Web
+// Audio analyser with the settings of LiveKit's useTrackVolume; the orb also swells a little with your own voice while
+// it listens; a lower pixel ratio and a frame limit, because the GPU is shared with the local LLM; a CSS orb when WebGL
+// is not available.
+const AURA_COLOR = {dark: [0.92, 0.92, 0.92], light: [0.12, 0.12, 0.12]};  // black and white (LiveKit's default is #1FD5F9)
+const AURA_HEAD = `precision highp float;
+uniform float iTime;
+uniform vec3 iResolution;
+uniform float uSpeed, uBlur, uScale, uShape, uFrequency, uAmplitude, uBloom, uMix, uSpacing, uColorShift, uVariance, uSmoothing, uMode;
+uniform vec3 uColor;
+`;
+const AURA_FS = `const float TAU = 6.283185;
+
+// Noise for dithering
+vec2 randFibo(vec2 p) {
+  p = fract(p * vec2(443.897, 441.423));
+  p += dot(p, p.yx + 19.19);
+  return fract((p.xx + p.yx) * p.xy);
 }
+
+// Tonemap
+vec3 Tonemap(vec3 x) {
+  x *= 4.0;
+  return x / (1.0 + x);
+}
+
+// Luma for alpha
+float luma(vec3 color) {
+  return dot(color, vec3(0.299, 0.587, 0.114));
+}
+
+// RGB to HSV
+vec3 rgb2hsv(vec3 c) {
+  vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+  vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+  vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+  float d = q.x - min(q.w, q.y);
+  float e = 1.0e-10;
+  return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+// HSV to RGB
+vec3 hsv2rgb(vec3 c) {
+  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+  return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+// SDF shapes
+float sdCircle(vec2 st, float r) {
+  return length(st) - r;
+}
+
+float sdLine(vec2 p, float r) {
+  float halfLen = r * 2.0;
+  vec2 a = vec2(-halfLen, 0.0);
+  vec2 b = vec2(halfLen, 0.0);
+  vec2 pa = p - a;
+  vec2 ba = b - a;
+  float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  return length(pa - ba * h);
+}
+
+float getSdf(vec2 st) {
+  if(uShape == 1.0) return sdCircle(st, uScale);
+  else if(uShape == 2.0) return sdLine(st, uScale);
+  return sdCircle(st, uScale); // Default
+}
+
+vec2 turb(vec2 pos, float t, float it) {
+  // Initial rotation matrix for swirl direction
+  mat2 rotation = mat2(0.6, -0.25, 0.25, 0.9);
+  // Secondary rotation applied each iteration (approx 53 degree rotation)
+  mat2 layerRotation = mat2(0.6, -0.8, 0.8, 0.6);
+
+  float frequency = mix(2.0, 15.0, uFrequency);
+  float amplitude = uAmplitude;
+  float frequencyGrowth = 1.4;
+  float animTime = t * 0.1 * uSpeed;
+
+  const int LAYERS = 4;
+  for(int i = 0; i < LAYERS; i++) {
+    // Calculate wave displacement for this layer
+    vec2 rotatedPos = pos * rotation;
+    vec2 wave = sin(frequency * rotatedPos + float(i) * animTime + it);
+
+    // Apply displacement along rotation direction
+    pos += (amplitude / frequency) * rotation[0] * wave;
+
+    // Evolve parameters for next layer
+    rotation *= layerRotation;
+    amplitude *= mix(1.0, max(wave.x, wave.y), uVariance);
+    frequency *= frequencyGrowth;
+  }
+
+  return pos;
+}
+
+const float ITERATIONS = 36.0;
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / iResolution.xy;
+
+  vec3 pp = vec3(0.0);
+  vec3 bloom = vec3(0.0);
+  float t = iTime * 0.5;
+  vec2 pos = uv - 0.5;
+
+  vec2 prevPos = turb(pos, t, 0.0 - 1.0 / ITERATIONS);
+  float spacing = mix(1.0, TAU, uSpacing);
+
+  for(float i = 1.0; i < ITERATIONS + 1.0; i++) {
+    float iter = i / ITERATIONS;
+    vec2 st = turb(pos, t, iter * spacing);
+    float d = abs(getSdf(st));
+    float pd = distance(st, prevPos);
+    prevPos = st;
+    float dynamicBlur = exp2(pd * 2.0 * 1.4426950408889634) - 1.0;
+    float ds = smoothstep(0.0, uBlur * 0.05 + max(dynamicBlur * uSmoothing, 0.001), d);
+
+    // Shift color based on iteration using uColorScale
+    vec3 color = uColor;
+    if(uColorShift > 0.01) {
+      vec3 hsv = rgb2hsv(color);
+      // Shift hue by iteration
+      hsv.x = fract(hsv.x + (1.0 - iter) * uColorShift * 0.3);
+      color = hsv2rgb(hsv);
+    }
+
+    float invd = 1.0 / max(d + dynamicBlur, 0.001);
+    pp += (ds - 1.0) * color;
+    bloom += clamp(invd, 0.0, 250.0) * color;
+  }
+
+  pp *= 1.0 / ITERATIONS;
+
+  vec3 color;
+
+  // Dark mode (default)
+  if(uMode < 0.5) {
+    // use bloom effect
+    bloom = bloom / (bloom + 2e4);
+    color = (-pp + bloom * 3.0 * uBloom) * 1.2;
+    color += (randFibo(fragCoord).x - 0.5) / 255.0;
+    color = Tonemap(color);
+    float alpha = luma(color) * uMix;
+    fragColor = vec4(color * uMix, alpha);
+  }
+
+  // Light mode
+  else {
+    // no bloom effect
+    color = -pp;
+    color += (randFibo(fragCoord).x - 0.5) / 255.0;
+
+    // Preserve hue by tone mapping brightness only
+    float brightness = length(color);
+    vec3 direction = brightness > 0.0 ? color / brightness : color;
+
+    // Reinhard on brightness
+    float factor = 2.0;
+    float mappedBrightness = (brightness * factor) / (1.0 + brightness * factor);
+    color = direction * mappedBrightness;
+
+    // Boost saturation to compensate for white background bleed-through
+    // When alpha < 1.0, white bleeds through making colors look desaturated
+    // So we increase saturation to maintain vibrant appearance
+    float gray = dot(color, vec3(0.2, 0.5, 0.1));
+    float saturationBoost = 3.0;
+    color = mix(vec3(gray), color, saturationBoost);
+
+    // Clamp between 0-1
+    color = clamp(color, 0.0, 1.0);
+
+    float alpha = mappedBrightness * clamp(uMix, 1.0, 2.0);
+    fragColor = vec4(color, alpha);
+  }
+}`;
+const AURA_MAIN = `
+void main(void) {
+  vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+  mainImage(color, gl_FragCoord.xy);
+  gl_FragColor = color;
+}`;
+const ORB_FPS = 30;          // the shader is heavy (36 steps of 4 layers for each pixel): 30 frames a second are enough
+const ORB_IDLE_FPS = 15;     // and 15 while there is no call: the GPU is better left to the LLM
+const ORB_PIXEL_RATIO = 1;   // and so is one pixel for each CSS pixel (LiveKit's limit is 2)
+const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function makeAura(canvas) {
+  const gl = canvas.getContext("webgl", {alpha: true, premultipliedAlpha: true, antialias: false, powerPreference: "low-power"});
+  if (!gl) return null;
+  const compile = (type, source) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, source); gl.compileShader(s);
+    if (gl.getShaderParameter(s, gl.COMPILE_STATUS)) return s;
+    console.error("orb shader:", gl.getShaderInfoLog(s));
+    return null;
+  };
+  const vs = compile(gl.VERTEX_SHADER, "attribute vec2 position; void main() { gl_Position = vec4(position, 0.0, 1.0); }");
+  const fs = compile(gl.FRAGMENT_SHADER, AURA_HEAD + AURA_FS + AURA_MAIN);
+  if (!vs || !fs) return null;
+  const program = gl.createProgram();
+  gl.attachShader(program, vs); gl.attachShader(program, fs); gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) { console.error("orb shader:", gl.getProgramInfoLog(program)); return null; }
+  gl.useProgram(program);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);  // one square, two triangles
+  const position = gl.getAttribLocation(program, "position");
+  gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+  const at = {};
+  for (const n of ["iTime", "iResolution", "uSpeed", "uBlur", "uScale", "uShape", "uFrequency", "uAmplitude", "uBloom", "uMix",
+                   "uSpacing", "uColorShift", "uVariance", "uSmoothing", "uMode", "uColor"]) at[n] = gl.getUniformLocation(program, n);
+  return {
+    draw(time, p, width, height) {
+      if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+      gl.viewport(0, 0, width, height);
+      gl.uniform1f(at.iTime, time); gl.uniform3f(at.iResolution, width, height, 1);
+      gl.uniform1f(at.uSpeed, p.speed); gl.uniform1f(at.uScale, p.scale); gl.uniform1f(at.uAmplitude, p.amplitude);
+      gl.uniform1f(at.uFrequency, p.frequency); gl.uniform1f(at.uMix, p.brightness); gl.uniform1f(at.uMode, p.light ? 1 : 0);
+      // the settings that LiveKit's component passes to its shader
+      gl.uniform1f(at.uBlur, 0.2); gl.uniform1f(at.uShape, 1); gl.uniform1f(at.uBloom, 0); gl.uniform1f(at.uSpacing, 0.5);
+      gl.uniform1f(at.uColorShift, 0); gl.uniform1f(at.uVariance, 0.1); gl.uniform1f(at.uSmoothing, 1);
+      gl.uniform3f(at.uColor, ...(p.light ? AURA_COLOR.light : AURA_COLOR.dark));
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    },
+  };
+}
+
+// A number that moves to a target: ease out (Motion's default), a spring, or a pulse between two values.
+const easeOut = (p) => 1 - (1 - p) * (1 - p);
+function springAt(t, duration, bounce) {  // a damped spring that settles in `duration` seconds, from 0 to 1, with a small overshoot
+  const z = 1 - bounce, w0 = Math.log(100) / (z * duration), wd = w0 * Math.sqrt(1 - z * z), d = z * w0;
+  return 1 - Math.exp(-d * t) * (Math.cos(wd * t) + (d / wd) * Math.sin(wd * t));
+}
+class Tween {
+  constructor(v) { this.v = v; this.job = null; }
+  active() { return this.job !== null; }
+  ease(to, duration = 0.5) { this.job = {kind: "ease", from: this.v, to, duration, t: 0}; }
+  spring(to, duration = 1.0, bounce = 0.35) { this.job = {kind: "spring", from: this.v, to, duration, bounce, t: 0}; }
+  pulse(a, b, duration = 0.35) { this.job = {kind: "pulse", a, b, duration, t: 0}; }  // a to b to a ..., for ever
+  step(dt) {
+    const j = this.job;
+    if (!j) return;
+    j.t += dt;
+    if (j.kind === "pulse") {
+      const k = (j.t / j.duration) % 2;
+      this.v = j.a + (j.b - j.a) * easeOut(k < 1 ? k : 2 - k);
+      return;
+    }
+    const p = Math.min(1, j.t / j.duration);
+    this.v = p >= 1 ? j.to : j.from + (j.to - j.from) * (j.kind === "spring" ? springAt(j.t, j.duration, j.bounce) : easeOut(p));
+    if (p >= 1) this.job = null;
+  }
+}
+
+// How the orb moves in each agent state (the table of use-agent-audio-visualizer-aura.ts)
+const ORB_LOOKS = {
+  idle:      (o) => { o.speed = 10; o.scale.ease(0.2); o.amplitude.ease(1.2); o.frequency.ease(0.4); o.brightness.ease(1.0); },
+  listening: (o) => { o.speed = 20; o.scale.spring(0.3); o.amplitude.ease(1.0); o.frequency.ease(0.7); o.brightness.pulse(1.5, 2.0); },
+  thinking:  (o) => { o.speed = 30; o.scale.ease(0.3); o.amplitude.ease(0.5); o.frequency.ease(1.0); o.brightness.pulse(0.5, 2.5); },
+  speaking:  (o) => { o.speed = 70; o.scale.ease(0.3); o.amplitude.ease(0.75); o.frequency.ease(1.25); o.brightness.ease(1.5); },
+};
+const ORB_LOOK_OF = {idle: "idle", connecting: "thinking", initializing: "thinking", thinking: "thinking", listening: "listening", speaking: "speaking"};
 
 // The volume of an audio track, from 0 to 1, like LiveKit's useTrackVolume (fftSize 512, smoothing 0.55)
 const orbAudio = {ctx: null};
@@ -693,64 +906,40 @@ function orbMeter(track) {
 }
 
 const orb = {
-  el: $("orb"), look: "idle", agentMeter: null, micMeter: null, last: 0, t: 0,
-  // the eased values that each frame draws
-  v: {wobble: .025, speed: .7, bob: 3, gx: 0, gy: 0, open: 1, dots: 0, size: 1, mouth: 0, mic: 0},
-  blink: {next: 2, left: 0}, pointer: null,
-  part: Object.fromEntries(["bd-all", "bd-body", "bd-glow", "bd-face", "bd-eye-l", "bd-eye-r", "bd-mouth", "bd-dots", "bd-shadow"].map((id) => [id, $(id)])),
-  setState(name) { this.look = ORB_LOOK_OF[name] || "listening"; },
+  el: $("orb"), canvas: $("orb-canvas"), aura: null, look: "", start: performance.now(), last: 0, agentMeter: null, micMeter: null,
+  speed: 10, scale: new Tween(0.2), amplitude: new Tween(2), frequency: new Tween(0.5), brightness: new Tween(1.5),
+  setState(name) {
+    const look = ORB_LOOK_OF[name] || "listening";
+    if (look === this.look) return;  // connecting and initializing look alike: the pulse must not start again
+    this.look = look;
+    ORB_LOOKS[look](this);
+  },
 };
-addEventListener("pointermove", (e) => {  // idle: the eyes follow the pointer
-  const r = orb.el.getBoundingClientRect();
-  orb.pointer = [Math.max(-1, Math.min(1, (e.clientX - r.left - r.width / 2) / (r.width * 0.9))),
-                 Math.max(-1, Math.min(1, (e.clientY - r.top - r.height / 2) / (r.height * 0.9)))];
-}, {passive: true});
 function orbFrame(now) {
   requestAnimationFrame(orbFrame);
-  if (document.hidden || !orb.el.clientWidth) return;  // no orb on the screen: no drawing
+  if (!orb.aura || document.hidden || !orb.canvas.clientWidth) return;  // no orb on the screen: no drawing
   if (now - orb.last < 1000 / (orb.look === "idle" ? ORB_IDLE_FPS : ORB_FPS) - 2) return;
-  const dt = Math.min(0.1, (now - (orb.last || now)) / 1000);
+  const dt = Math.min(0.1, (now - orb.last) / 1000);
   orb.last = now;
-  const L = BUDDY_LOOKS[orb.look], v = orb.v, P = orb.part, calm = REDUCED_MOTION ? 0.3 : 1;
-  orb.t += dt * v.speed * calm;
-  const agentVol = orb.look === "speaking" && orb.agentMeter ? Math.min(1, orb.agentMeter.volume() * 2.2) : 0;
-  const micVol = orb.look === "listening" && orb.micMeter ? Math.min(1, orb.micMeter.volume() * 2.2) : 0;
-  for (const k of ["wobble", "speed", "bob", "open", "dots"]) v[k] = ease(v[k], L[k], 4, dt);
-  // where the eyes look: a fixed point, a slow scan, or the pointer (idle)
-  let gaze = L.gaze === "scan" ? [Math.sin(now / 520), -0.2 + 0.25 * Math.sin(now / 900)]
-    : L.gaze || orb.pointer || [0.35 * Math.sin(now / 2300), 0.2 * Math.sin(now / 3100)];
-  v.gx = ease(v.gx, gaze[0], 6, dt); v.gy = ease(v.gy, gaze[1], 6, dt);
-  v.mouth = ease(v.mouth, agentVol, 18, dt); v.mic = ease(v.mic, micVol, 10, dt);
-  v.size = ease(v.size, 1 + 0.07 * v.mouth + 0.06 * v.mic, 10, dt);
-  // body: breathing outline, a little squash with the voice, a gentle bob
-  const breathe = 1 + 0.015 * Math.sin(now / 900) * calm;
-  const sx = v.size * breathe * (1 + 0.03 * v.mouth), sy = v.size * breathe * (1 - 0.02 * v.mouth);
-  const d = blobPath(100, 100, 62, v.wobble * calm + 0.05 * v.mouth + 0.04 * v.mic, orb.t, sx, sy);
-  P["bd-body"].setAttribute("d", d); P["bd-glow"].setAttribute("d", d);
-  const bob = v.bob * Math.sin(now / 700) * calm;
-  P["bd-all"].setAttribute("transform", `translate(0 ${bob.toFixed(2)})`);
-  P["bd-shadow"].setAttribute("rx", (44 * (1 - bob / 60)).toFixed(1));
-  // face: turns toward the gaze; eyes blink every 2 to 6 s
-  P["bd-face"].setAttribute("transform", `translate(${(v.gx * 7).toFixed(2)} ${(v.gy * 5).toFixed(2)})`);
-  orb.blink.next -= dt;
-  if (orb.blink.next <= 0) { orb.blink.left = 0.14; orb.blink.next = 2 + Math.random() * 4; }
-  const closing = orb.blink.left > 0 ? Math.abs(Math.sin((orb.blink.left -= dt) / 0.14 * Math.PI)) : 0;
-  const lid = Math.max(0.08, v.open * (1 - closing));
-  for (const [id, x] of [["bd-eye-l", 82], ["bd-eye-r", 118]]) {
-    P[id].setAttribute("transform", `translate(${x} 98) scale(1 ${lid.toFixed(3)})`);
-    P[id].querySelector(".bd-pupil").setAttribute("transform", `translate(${(v.gx * 4).toFixed(2)} ${(v.gy * 5).toFixed(2)})`);
+  for (const t of [orb.scale, orb.amplitude, orb.frequency, orb.brightness]) t.step(dt);
+  if (orb.look === "speaking") {  // LiveKit: while the agent speaks, the size follows its volume
+    const volume = orb.agentMeter ? orb.agentMeter.volume() : 0;
+    if (volume > 0 && !orb.scale.active()) orb.scale.v = 0.2 + 0.2 * volume;
+  } else if (orb.look === "listening" && !orb.scale.active()) {  // and while it listens, it swells a little with your voice
+    orb.scale.v = 0.3 + 0.1 * (orb.micMeter ? orb.micMeter.volume() : 0);
   }
-  // mouth: a smile at rest, an open mouth that follows the voice
-  const h = v.mouth * 13;
-  P["bd-mouth"].setAttribute("d", h < 1.2 ? "M91 124 Q100 131 109 124" : `M89 123 Q100 ${(121 - h * 0.15).toFixed(1)} 111 123 Q100 ${(124 + h * 1.6).toFixed(1)} 89 123Z`);
-  P["bd-mouth"].style.fill = h < 1.2 ? "none" : "";
-  // thinking: three dots bounce in turn
-  P["bd-dots"].querySelectorAll("circle").forEach((c, i) => {
-    c.style.opacity = (v.dots * (0.35 + 0.65 * Math.max(0, Math.sin(now / 260 - i * 0.9)))).toFixed(2);
-    c.setAttribute("transform", `translate(0 ${(-4 * v.dots * Math.max(0, Math.sin(now / 260 - i * 0.9))).toFixed(2)})`);
-  });
+  const ratio = Math.min(window.devicePixelRatio || 1, ORB_PIXEL_RATIO);
+  orb.aura.draw((now - orb.start) / 1000 * (REDUCED_MOTION ? 0.25 : 1),
+                {speed: orb.speed, scale: orb.scale.v, amplitude: orb.amplitude.v, frequency: orb.frequency.v,
+                 brightness: orb.brightness.v, light: document.documentElement.dataset.theme === "light"},
+                Math.max(64, Math.round(orb.canvas.clientWidth * ratio)), Math.max(64, Math.round(orb.canvas.clientHeight * ratio)));
 }
-function orbStart() { requestAnimationFrame(orbFrame); }
+function orbStart() {
+  orb.aura = makeAura(orb.canvas);
+  if (!orb.aura) orb.el.classList.add("no-webgl");  // a plain CSS orb
+  orb.canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); orb.aura = null; orb.el.classList.add("no-webgl"); });
+  requestAnimationFrame(orbFrame);
+}
 
 // What the orb shows: the call, and the state that the voice agent publishes in its participant attributes
 const AGENT_STATE_ALIAS = {disconnected: "idle", failed: "idle", "pre-connect-buffering": "listening"};

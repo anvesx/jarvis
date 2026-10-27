@@ -64,4 +64,5 @@ this computer, so a device needs a network path to it. See [decision 0009](docs/
 
 Model credits: Whistle by Cactus Compute; Parakeet TDT 0.6B v3 by NVIDIA (CC-BY-4.0); Kokoro-82M; maya1 by Maya
 Research; indic-speak by Bodhan AI; LiveKit's turn detector and Silero VAD through LiveKit Agents. The orb of the call
-page is orb's own character (SVG, no WebGL).
+page is LiveKit's Aura visualizer from `livekit/components-js` (Apache-2.0; license and notice in
+`apps/agent/src/orb_agent/static/vendor/`).
