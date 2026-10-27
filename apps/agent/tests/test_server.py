@@ -215,22 +215,20 @@ def test_the_bench_tools_are_tabs_of_the_chat_page(app_and_dir):
 def test_the_talk_tab_is_an_orb_and_two_buttons_with_no_session_start_screen(app_and_dir):
     c = local(app_and_dir[0])
     html = c.get("/").text
-    for needed in ('id="orb"', 'id="orb-canvas"', 'id="orb-state"', 'id="talk"', 'id="new-session"', "New session"):
+    for needed in ('id="orb"', 'id="bd-body"', 'id="orb-state"', 'id="talk"', 'id="new-session"', "New session"):
         assert needed in html
     # no topic, no Start button, no examples, no text box: a session starts by itself when the person presses Talk
     for gone in ('id="topic"', 'id="go"', 'id="start"', 'id="examples"', 'id="composer"', 'id="text"', 'id="send"',
                  "startSession", "loadSession", "history.replaceState"):
         assert gone not in html, gone
     assert 'topic: "Open discussion"' in html            # the session that Talk makes has a fixed topic
-    # the orb is LiveKit's Aura visualizer: the credit and the license files are shipped with it
-    assert "agent-audio-visualizer-aura" in html and "Apache-2.0" in html
+    # the orb is a character in SVG (no WebGL): a body, two eyes, a mouth, and the dots of thinking
+    for part in ('id="bd-eye-l"', 'id="bd-eye-r"', 'id="bd-mouth"', 'id="bd-dots"', "<svg class=\"buddy\""):
+        assert part in html, part
+    assert "getContext(\"webgl" not in html
     assert "lk.agent.state" in html                       # LiveKit's own signal for the state of the agent
-    vendor = Path(__file__).parents[1] / "src" / "orb_agent" / "static" / "vendor"
-    assert "Apache License" in (vendor / "LICENSE-livekit-components-js.txt").read_text()
-    assert "LiveKit, Inc." in (vendor / "NOTICE-livekit-components-js.txt").read_text()
-    # the states of LiveKit's table, and the speed of each: idle 10, listening 20, thinking 30, speaking 70
-    for state, speed in (("idle", 10), ("listening", 20), ("thinking", 30), ("speaking", 70)):
-        assert f"{state}: " in html and f"o.speed = {speed};" in html
+    for state in ("idle", "connecting", "listening", "thinking", "speaking"):  # each state has its own look
+        assert f"  {state}:" in html, state
 
 
 def test_the_captions_show_what_the_stt_heard_and_what_the_tts_speaks(app_and_dir):
