@@ -93,7 +93,7 @@ main { min-height: 0; }
 #stage { display: grid; justify-items: center; gap: 18px; width: 100%; max-width: 640px; padding-top: 8px; }
 .orb { --orb-size: clamp(170px, min(36vh, 70vw), 380px); width: var(--orb-size); height: var(--orb-size); position: relative; border-radius: 50%; }
 .orb canvas { display: block; width: 100%; height: 100%; }
-.orb.no-webgl { background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--ink) 90%, transparent), color-mix(in srgb, var(--ink) 30%, transparent) 40%, transparent 68%);
+.orb.no-webgl { background: radial-gradient(circle at 50% 45%, rgba(77, 140, 255, .95), rgba(77, 140, 255, .35) 40%, rgba(77, 140, 255, 0) 68%);
                 animation: orb-breathe 3s ease-in-out infinite; }
 .orb.no-webgl[data-state="thinking"], .orb.no-webgl[data-state="connecting"], .orb.no-webgl[data-state="initializing"] { animation-duration: .8s; }
 .orb.no-webgl[data-state="speaking"] { animation-duration: .5s; }
@@ -625,7 +625,7 @@ function render() { renderLog(); renderSide(); showSessionModels(); }
 // Audio analyser with the settings of LiveKit's useTrackVolume; the orb also swells a little with your own voice while
 // it listens; a lower pixel ratio and a frame limit, because the GPU is shared with the local LLM; a CSS orb when WebGL
 // is not available.
-const AURA_COLOR = {dark: [0.92, 0.92, 0.92], light: [0.12, 0.12, 0.12]};  // black and white (LiveKit's default is #1FD5F9)
+const AURA_COLOR = {dark: [0.30, 0.55, 1.00], light: [0.15, 0.39, 0.92]};  // blue: #4D8CFF on dark, #2563EB on light (LiveKit's default is #1FD5F9)
 const AURA_HEAD = `precision highp float;
 uniform float iTime;
 uniform vec3 iResolution;
@@ -843,7 +843,7 @@ function makeAura(canvas) {
       gl.uniform1f(at.uFrequency, p.frequency); gl.uniform1f(at.uMix, p.brightness); gl.uniform1f(at.uMode, p.light ? 1 : 0);
       // the settings that LiveKit's component passes to its shader
       gl.uniform1f(at.uBlur, 0.2); gl.uniform1f(at.uShape, 1); gl.uniform1f(at.uBloom, 0); gl.uniform1f(at.uSpacing, 0.5);
-      gl.uniform1f(at.uColorShift, 0); gl.uniform1f(at.uVariance, 0.1); gl.uniform1f(at.uSmoothing, 1);
+      gl.uniform1f(at.uColorShift, 0.05); gl.uniform1f(at.uVariance, 0.1); gl.uniform1f(at.uSmoothing, 1);
       gl.uniform3f(at.uColor, ...(p.light ? AURA_COLOR.light : AURA_COLOR.dark));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     },
