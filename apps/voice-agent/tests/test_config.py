@@ -11,16 +11,19 @@ def test_session_for_rooms_of_the_web_page_and_others():
     assert session_for("orb-BAD ID") != "BAD ID"  # an invalid ID after the prefix does not pass
 
 
-def test_repo_env_copies_only_orb_and_livekit_keys(tmp_path, monkeypatch):
+def test_repo_env_copies_only_orb_and_livekit_keys_and_the_gemini_key(tmp_path, monkeypatch):
     (tmp_path / ".env").write_text("ORB_TTS_VOICE=am_michael\nLIVEKIT_URL=ws://127.0.0.1:7880\n"
-                                   "CF_WORKERS_TOKEN=do-not-copy\nORB_STT_LANGUAGE=de\n")
-    for k in ("ORB_TTS_VOICE", "LIVEKIT_URL", "CF_WORKERS_TOKEN"):
+                                   "CF_WORKERS_TOKEN=do-not-copy\nORB_STT_LANGUAGE=de\nGOOGLE_API_KEY=g-key\n"
+                                   "GOOGLE_APPLICATION_CREDENTIALS=/do/not/copy\nGOOGLE_API_KEY_OLD=old\n")
+    for k in ("ORB_TTS_VOICE", "LIVEKIT_URL", "CF_WORKERS_TOKEN", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS",
+              "GOOGLE_API_KEY_OLD"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("ORB_STT_LANGUAGE", "en")  # a set variable wins over the file
     loaded = load_repo_env(tmp_path)
-    assert sorted(loaded) == ["LIVEKIT_URL", "ORB_TTS_VOICE"]
+    assert sorted(loaded) == ["GOOGLE_API_KEY", "LIVEKIT_URL", "ORB_TTS_VOICE"]
     import os
-    assert "CF_WORKERS_TOKEN" not in os.environ and os.environ["ORB_STT_LANGUAGE"] == "en"
+    assert "CF_WORKERS_TOKEN" not in os.environ and "GOOGLE_APPLICATION_CREDENTIALS" not in os.environ
+    assert "GOOGLE_API_KEY_OLD" not in os.environ and os.environ["ORB_STT_LANGUAGE"] == "en"
 
 
 def test_settings_defaults_and_overrides(monkeypatch):

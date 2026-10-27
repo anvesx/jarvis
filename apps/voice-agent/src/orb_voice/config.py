@@ -18,6 +18,7 @@ DEV_KEY, DEV_SECRET = "devkey", "secret"  # the public credentials of `livekit-s
 ROOM_PREFIX = "orb-"
 SESSION_ID = re.compile(r"^[a-z0-9][a-z0-9-]{2,47}$")  # the same rule as orb_core.agent.check_session_id
 ENV_PREFIXES = ("ORB_", "LIVEKIT_")
+ENV_NAMES = ("GOOGLE_API_KEY",)  # by its exact name: the Gemini key (Gemini Live, docs/design/gemini-live.md)
 
 
 def session_for(room: str) -> str:
@@ -40,8 +41,9 @@ def check_livekit(env=os.environ) -> None:
 
 
 def load_repo_env(root: Path | None = None) -> list[str]:
-    """Copy ORB_* and LIVEKIT_* keys from the repo .env into os.environ when they are not set. Returns the names."""
-    return load_env_prefixes(ENV_PREFIXES, root)
+    """Copy ORB_* and LIVEKIT_* keys and GOOGLE_API_KEY from the repo .env into os.environ when they are not set.
+    Returns the names."""
+    return load_env_prefixes(ENV_PREFIXES, root, exact=ENV_NAMES)
 
 
 def _num(name: str, default: float) -> float:

@@ -9,7 +9,7 @@ description = "The orb voice worker on LiveKit Agents: Silero VAD and LiveKit's 
 requires-python = ">=3.12"
 dependencies = [
   "orb-core>=0.1",
-  "livekit-agents[silero]~=1.8.8",  # brings livekit-local-inference (turn detector v1-mini, LiveKit Model License)
+  "livekit-agents[silero,google]~=1.8.9",  # silero brings livekit-local-inference (turn detector v1-mini); google: Gemini Live
   "httpx>=0.27",
   "numpy>=2",
 ]
