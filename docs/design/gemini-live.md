@@ -94,8 +94,11 @@ else:
 
 - `SessionConfig`: `voice_mode`, `gemini_model`, `gemini_voice`, checked against lists (the plugin's models and
   voices), stored with the session like the other fields.
-- `GET /v1/voice/status` adds `gemini: {available: bool, why: str}` (available when `GOOGLE_API_KEY` is set; the
-  value is never sent).
+- `GET /v1/models` adds `gemini: {available, models, default_model, voices, default_voice}` (available when
+  `GOOGLE_API_KEY` is set; the value is never sent). A `gemini-live` config without the key gets 400.
+- A session that starts in `gemini-live` never warms the LLM (`prepare(warm=False)`): warming loads gemma4:e2b
+  (7.9 GB) for a call that does not use it. A session that started in `orb` mode and switches later has already warmed
+  it; New session avoids that.
 - `GET /v1/sessions/{id}/instructions` returns the text of 3.2.
 
 ### 3.4 Keys and dependencies

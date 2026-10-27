@@ -52,6 +52,11 @@ def system_prompt(topic: str, source: dict | None = None) -> str:
     return SYSTEM.format(topic=topic, source=block)
 
 
+def realtime_prompt(topic: str, source: dict | None = None) -> str:
+    """The system prompt for a speech-to-speech model (Gemini Live): no per-turn note comes, so its rule is left out."""
+    return system_prompt(topic, source).rsplit("\n- Before each reply", 1)[0]  # the last rule; a topic may hold the words
+
+
 def describe_debt(d, ledger) -> str:
     """One debt in plain words, with a quote of the message that started it."""
     said = quote(ledger.messages[d.start]["text"]) if d.start < len(ledger.messages) else ""

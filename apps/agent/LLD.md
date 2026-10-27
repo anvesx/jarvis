@@ -12,7 +12,8 @@ Today it hosts one agent, `discussion`, with one instance for each LLM that a se
 |---|---|---|---|
 | `POST /v1/sessions` | `{"topic", "agent"?, "config"?}` | topic 1 to 2,000 characters; config below | 201 and the state |
 | `PUT /v1/sessions/{id}/config` | the config | the LLM cannot change after the start | the config |
-| `GET /v1/models` | none | | `{"llm": {"default", "installed"}}` from Ollama's list |
+| `GET /v1/models` | none | | `{"llm": {"default", "installed"}, "gemini": {"available", "models", "default_model", "voices", "default_voice"}}`; `available`: `GOOGLE_API_KEY` is set (its value is never sent) |
+| `GET /v1/sessions/{id}/instructions` | none | the session must exist | `{"instructions"}`: the system prompt of a Gemini Live call (orb's prompt without the per-turn note rule, and the voice rules); loads the topic's source, never warms the LLM |
 | `GET /v1/sessions` | none | | `[{id, topic, agent}]` |
 | `GET /v1/sessions/{id}[?since=v]` | none | ID rule (orb-core) | the state, or `{"version": v, "unchanged": true}` |
 | `PUT /v1/sessions/{id}` | `{"topic", "agent"?}` | | the state; creates the session when it is missing |
@@ -34,7 +35,10 @@ Today it hosts one agent, `discussion`, with one instance for each LLM that a se
 
 The session config: `stt_engine`, `llm_model`, `tts_engine`, `tts_voice` (≤ 400 characters: a maya1 voice is a
 description), `tts_style` and `tts_lang`. The service checks `llm_model` against Ollama's installed models. The
-speech service checks the rest when the voice worker uses them.
+speech service checks the rest when the voice worker uses them. Gemini Live (docs/design/gemini-live.md):
+`voice_mode` (`orb` or `gemini-live`), `gemini_model` and `gemini_voice`, checked against `orb_core.gemini`; a
+`gemini-live` config without `GOOGLE_API_KEY` gets 400 with what to do. A session that starts in `gemini-live` loads its
+source but never warms the LLM (gemma4:e2b is 7.9 GB, and the call does not use it).
 
 ## 2. Algorithm
 - **Start:** load settings (`orb_core.config.bootstrap`), make the Jev reader and the Ollama client, build the

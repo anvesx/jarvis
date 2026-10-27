@@ -8,6 +8,8 @@ GET  /v1/sessions/{id}[?since=v]                            -> the state, or {"v
 PUT  /v1/sessions/{id}            {"topic", "agent"?}       -> the state; creates the session when it is missing
 POST /v1/sessions/{id}/turns      {"text", "channel"?, "replace_last"?}
                                   -> NDJSON events: read, decision, token..., reply, check, state
+GET  /v1/sessions/{id}/instructions                         -> {"instructions"}: the system prompt for Gemini Live
+GET  /v1/models                                             -> {"llm": {...}, "gemini": {available, models, voices, ...}}
 POST /v1/voice/token              {"session_id"}            -> {"url", "token", "room", "identity"}
 GET  /v1/voice/status                                       -> {"url", "dev", "local", "livekit", "worker"} or null
 GET  /health
@@ -29,6 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from orb_core import gemini
 from orb_core.agent import CHANNELS, Event, InputError, SessionStore, check_session_id
 from orb_agent import livekit_proxy
 from orb_agent.access import AccessMiddleware, check_key
@@ -47,6 +50,10 @@ class SessionConfig(BaseModel):
     tts_voice: str | None = Field(default=None, max_length=400)
     tts_style: str | None = Field(default=None, max_length=64)
     tts_lang: str | None = Field(default=None, max_length=16)
+    # Gemini Live (docs/design/gemini-live.md): "gemini-live" sends the call to Google; empty means "orb"
+    voice_mode: str | None = Field(default=None, max_length=16)
+    gemini_model: str | None = Field(default=None, max_length=64)
+    gemini_voice: str | None = Field(default=None, max_length=32)
 
 
 class NewSession(BaseModel):
@@ -67,12 +74,14 @@ class VoiceIn(BaseModel):
 
 def create_app(store: SessionStore, voice: VoiceConfig | None = None, *, model_agent=None, installed_models=None,
                default_model: str = "", speech_url: str | None = None, self_url: str = "http://127.0.0.1:8100",
-               share_key: str | None = None, probe=None, worker_port: int | None = None, livekit_probe=None) -> FastAPI:
+               share_key: str | None = None, probe=None, worker_port: int | None = None, livekit_probe=None,
+               gemini_available=gemini.available) -> FastAPI:
     """`model_agent(model)` makes an agent that uses another LLM; `installed_models()` lists the models it may use.
     With `speech_url`, the bench API (bench.py) is on too. `share_key` lets a remote request in (access.py).
     `probe(host, port)` says whether a server listens there: with it, the voice status tells whether the LiveKit server
     and the voice worker (on `worker_port`) run. `livekit_probe(url)` checks the LiveKit server by its address instead
-    (a tunnel accepts a connection also when no server is behind it). Without a probe, the status does not check."""
+    (a tunnel accepts a connection also when no server is behind it). Without a probe, the status does not check.
+    `gemini_available()` says whether the Gemini key is set (the "gemini-live" voice mode needs it)."""
     app = FastAPI(title="orb agent", docs_url=None, redoc_url=None)
     app.add_middleware(AccessMiddleware, key=check_key(share_key))  # checked here: Starlette makes the middleware at the first request
     proxy = voice is not None and is_local(voice.server)  # a LiveKit server on this computer: its signal goes through this service too
@@ -115,9 +124,22 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None, *, model_a
     def with_config(s) -> dict:
         return {**s.state(), "config": configs.get(s.id, {})}
 
-    def started(s):
+    def checked(config: SessionConfig | None) -> dict:
+        """The config without empty fields; 400 for a Gemini value that is not known or a Gemini mode without key."""
+        if config is None:
+            return {}
+        why = gemini.check(config.voice_mode, config.gemini_model, config.gemini_voice)
+        if why:
+            raise HTTPException(400, why)
+        if config.voice_mode == "gemini-live" and not gemini_available():
+            raise HTTPException(400, f"Gemini Live needs {gemini.KEY} in the repo .env (a Gemini API key). "
+                                     "Set it and restart scripts/dev.sh.")
+        return config.model_dump(exclude_none=True)
+
+    def started(s, config: dict):
+        # a Gemini Live call never uses the LLM of the session: warming it would load gigabytes for nothing
         if hasattr(s, "prepare"):
-            later(s.prepare())
+            later(s.prepare(warm=config.get("voice_mode") != "gemini-live"))
         return s
 
     async def save_after(s):
@@ -162,18 +184,21 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None, *, model_a
 
     @app.post("/v1/sessions", status_code=201)
     async def create(body: NewSession):
+        config = checked(body.config)
         agent = await agent_for(body)
         try:
-            s = started(store.create(body.topic, agent))
+            s = started(store.create(body.topic, agent), config)
         except InputError as e:
             raise HTTPException(400, str(e))
-        if body.config:
-            configs[s.id] = body.config.model_dump(exclude_none=True)
+        if config:
+            configs[s.id] = config
         return with_config(s)
 
     @app.get("/v1/models")
     async def models():
-        return {"llm": {"default": default_model, "installed": await installed_models() if installed_models else []}}
+        return {"llm": {"default": default_model, "installed": await installed_models() if installed_models else []},
+                "gemini": {"available": gemini_available(), "models": gemini.MODELS, "default_model": gemini.DEFAULT_MODEL,
+                           "voices": gemini.VOICES, "default_voice": gemini.DEFAULT_VOICE}}
 
     @app.put("/v1/sessions/{sid}/config")
     async def set_config(sid: str, body: SessionConfig):
@@ -181,8 +206,18 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None, *, model_a
         old = configs.get(sid, {})
         if body.llm_model and body.llm_model != old.get("llm_model", default_model):
             raise HTTPException(400, "The LLM of a session is fixed when it starts. Start a new session for another LLM.")
-        configs[sid] = {**old, **body.model_dump(exclude_none=True)}
+        # checked as a whole: a change of gemini_model alone in a gemini-live session still needs the key
+        configs[sid] = checked(SessionConfig(**{**old, **body.model_dump(exclude_none=True)}))
         return configs[s.id]
+
+    @app.get("/v1/sessions/{sid}/instructions")
+    async def instructions(sid: str):
+        """The system prompt of a Gemini Live call: orb's prompt for the topic and its source, and the voice rules."""
+        s = session_or_404(sid)
+        if not hasattr(s, "realtime_prompt"):
+            raise HTTPException(400, f"The agent of session {sid} has no prompt for Gemini Live.")
+        await s.prepare(warm=False)  # the source named in the topic, when the session has not loaded it yet
+        return {"instructions": s.realtime_prompt() + "\n" + gemini.VOICE_RULES.strip()}
 
     @app.get("/v1/sessions")
     async def listing():
@@ -200,10 +235,11 @@ def create_app(store: SessionStore, voice: VoiceConfig | None = None, *, model_a
     async def ensure(sid: str, body: NewSession):
         try:
             s = store.get(check_session_id(sid))
+            config = checked(body.config)  # also for a session that exists: a bad config is refused, not ignored
             if s is None:
-                s = started(store.create(body.topic, await agent_for(body), sid))
-                if body.config:
-                    configs[s.id] = body.config.model_dump(exclude_none=True)
+                s = started(store.create(body.topic, await agent_for(body), sid), config)
+                if config:
+                    configs[s.id] = config
         except InputError as e:
             raise HTTPException(400, str(e))
         return with_config(s)
