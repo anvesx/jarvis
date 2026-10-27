@@ -54,7 +54,9 @@ def system_prompt(topic: str, source: dict | None = None) -> str:
 
 def realtime_prompt(topic: str, source: dict | None = None) -> str:
     """The system prompt for a speech-to-speech model (Gemini Live): no per-turn note comes, so its rule is left out."""
-    return system_prompt(topic, source).rsplit("\n- Before each reply", 1)[0]  # the last rule; a topic may hold the words
+    text = system_prompt(topic, source).rsplit("\n- Before each reply", 1)[0]  # the last rule; a topic may hold the words
+    # Gemini answers in the person's language (orb_core.gemini.VOICE_RULES), so "English" must not contradict it
+    return text.replace("- Use plain spoken English.", "- Use plain spoken language.")
 
 
 def describe_debt(d, ledger) -> str:
