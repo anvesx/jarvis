@@ -289,6 +289,14 @@ async def gemini_call(ctx: JobContext, http: httpx.AsyncClient, s: Settings, sid
     watch(session, bench, sid, s)
     failed = {"sent": False}
 
+    @session.on("conversation_item_added")
+    def _reply(ev) -> None:  # the orb agent logs its replies; in Gemini Live this is the only place
+        item = ev.item
+        if getattr(item, "role", None) == "assistant" and getattr(item, "text_content", None):
+            log.info("Gemini words", extra={"session": sid, "chars": len(item.text_content),
+                                            "interrupted": getattr(item, "interrupted", False),
+                                            **({"text": item.text_content} if s.log_text else {})})
+
     @session.on("error")
     def _error(ev) -> None:
         err = getattr(ev, "error", ev)

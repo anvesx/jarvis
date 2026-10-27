@@ -159,3 +159,16 @@ def test_both_modes_share_the_transcript_and_state_events(monkeypatch):
     kinds = [k for k, _ in bench.sent]
     assert "transcript" in kinds and "agent_state" in kinds
     assert not any(k == "polished" for k in kinds)  # no polish: the speech service is not used
+
+
+def test_gemini_replies_are_logged_with_text_only_when_text_logging_is_on(monkeypatch, caplog):
+    for flag, has_text in (("0", False), ("1", True)):
+        monkeypatch.setenv("ORB_LOG_TEXT", flag)
+        session, _ = gemini_call(monkeypatch)
+        item = type("Item", (), {"role": "assistant", "text_content": "Namaste! Kya baat karein?", "interrupted": False,
+                                 "metrics": {}})()
+        caplog.clear()
+        with caplog.at_level("INFO", logger="orb.voice"):
+            session.fire("conversation_item_added", type("Ev", (), {"item": item})())
+        rec = [r for r in caplog.records if r.getMessage() == "Gemini words"]
+        assert len(rec) == 1 and rec[0].chars == 25 and (getattr(rec[0], "text", None) is not None) == has_text
