@@ -6,30 +6,32 @@
 <title>orb · discussion</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script>try { if (localStorage.getItem("orb-theme") === "light") document.documentElement.dataset.theme = "light"; } catch (e) {}</script>
 <style>
 /* One page: the model bar on top, then tabs. Talk: LiveKit's orb, the state in words, a Talk button and a New session
    button; the conversation, the live voice numbers and the engine's view are folded under them. STT, TTS, LLM and
    Suites: the bench tools.
-   Dark by default: cool near-black surfaces, one blue accent. A light theme is one click away (data-theme="light"). */
+   Black and white, like the smartrouter dashboard: black (or white) surfaces, thin grey borders, white (or black)
+   primary buttons, 10 px corners, Inter. Colour only for state: green ok / live, red errors and Hang up.
+   Dark by default; a light theme is one click away (data-theme="light"). */
 :root {
   color-scheme: dark;
-  --bg: #0F1115; --surface: #151821; --card: #1A1E28; --field: #12151C;
-  --ink: #E8EAEE; --ink-2: #C3C8D1; --muted: #8E95A1; --muted-2: #5F6673;
-  --rule: #262B36; --rule-2: #1D212B; --line-strong: #3A4150;
-  --accent: #6EA8FF; --accent-soft: #172440; --warn: #FF7A6E; --ok: #4ADE9B;
-  --primary-bg: #6EA8FF; --primary-fg: #0B1220;
-  --f-sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --f-serif: 'Source Serif 4', Georgia, serif;
+  --bg: #000000; --surface: #0A0A0A; --card: #0C0C0C; --field: #0C0C0C; --hover: #151515;
+  --ink: #FAFAFA; --ink-2: #D4D4D4; --muted: #8B8B8B; --muted-2: #5C5C5C;
+  --rule: #1F1F1F; --rule-2: #161616; --line-strong: #2E2E2E;
+  --accent: #FAFAFA; --accent-soft: #1A1A1A; --warn: #EF4444; --ok: #22C55E;
+  --primary-bg: #FAFAFA; --primary-fg: #0A0A0A;
+  --radius: 10px;
+  --f-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --f-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #FFFFFF; --surface: #FAFAF8; --card: #FFFFFF; --field: #FFFFFF;
-  --ink: #0A0A0A; --ink-2: #1A1A1A; --muted: #5C6066; --muted-2: #8A8F96;
-  --rule: #E5E5E5; --rule-2: #F0F0F0; --line-strong: #0A0A0A;
-  --accent: #1E6FFF; --accent-soft: #E8F0FF; --warn: #C0392B; --ok: #0A7C53;
+  --bg: #FFFFFF; --surface: #FAFAFA; --card: #FFFFFF; --field: #FFFFFF; --hover: #F0F0F0;
+  --ink: #0A0A0A; --ink-2: #262626; --muted: #6B6B6B; --muted-2: #A3A3A3;
+  --rule: #E5E5E5; --rule-2: #F0F0F0; --line-strong: #D4D4D4;
+  --accent: #0A0A0A; --accent-soft: #F0F0F0; --warn: #DC2626; --ok: #15803D;
   --primary-bg: #0A0A0A; --primary-fg: #FFFFFF;
 }
 * { box-sizing: border-box; }
@@ -47,9 +49,9 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .wrap { height: 100%; display: grid; grid-template-rows: auto auto auto 1fr; }
 header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 12px 24px; border-bottom: 1px solid var(--line-strong); background: var(--bg); }
 header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
-header h1 em { font-family: var(--f-serif); font-weight: 400; color: var(--accent); }
+header h1 em { font-style: normal; font-weight: 400; color: var(--muted); }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.chip { font-family: var(--f-mono); font-size: 11px; padding: 2px 8px; border: 1px solid var(--rule); color: var(--muted); background: transparent; }
+.chip { font-family: var(--f-mono); font-size: 11px; padding: 3px 9px; border: 1px solid var(--rule); border-radius: 999px; color: var(--muted); background: transparent; white-space: nowrap; }
 .chip.fixed { color: var(--ink-2); }
 .chip.ok { color: var(--ok); border-color: currentColor; }
 .chip.bad { color: var(--warn); border-color: currentColor; }
@@ -58,15 +60,19 @@ button.chip { cursor: pointer; }
 button.chip:hover { color: var(--ink); border-color: var(--muted-2); }
 
 /* the model bar */
-.models { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 12px; padding: 10px 24px;
+.models { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 12px; padding: 12px 24px;
           border-bottom: 1px solid var(--rule); background: var(--surface); }
-label.field { display: grid; gap: 3px; min-width: 0; }
+label.field { display: grid; gap: 4px; min-width: 0; }
+.models label.field { flex: 1 1 130px; max-width: 280px; }
+.models label.field:has(#m-mode) { flex-basis: 190px; }  /* wide enough for "Gemini Live (cloud)" */
+.models select, .models input { height: 38px; }  /* selects and text fields line up */
 label.field select, label.field input { width: 100%; }
-select, input[type=text], input[type=number], textarea { border: 1px solid var(--line-strong); background: var(--field); color: var(--ink); padding: 7px 10px; border-radius: 0; min-width: 0; }
+select, input[type=text], input[type=number], textarea { border: 1px solid var(--line-strong); background: var(--field); color: var(--ink); padding: 8px 10px; border-radius: var(--radius); min-width: 0; }
 input::placeholder, textarea::placeholder { color: var(--muted-2); }
 select:focus, input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-#cloud-note { grid-column: 1 / -1; font-size: 13px; color: var(--warn); }
-#model-note { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+#cloud-note { flex-basis: 100%; font-size: 13px; color: var(--ink-2); }
+#cloud-note::before { content: "● "; color: var(--warn); }  /* the audio leaves this computer */
+#model-note { flex-basis: 100%; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
 
 /* tabs */
 nav.tabs { display: flex; padding: 0 24px; border-bottom: 1px solid var(--rule); overflow-x: auto; background: var(--bg); }
@@ -75,18 +81,19 @@ nav.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
 main { min-height: 0; }
 
 /* buttons */
-.btn { padding: 8px 16px; border: 1px solid var(--line-strong); background: var(--card); color: var(--ink); cursor: pointer; border-radius: 0; font-weight: 500; }
+.btn { padding: 8px 16px; border: 1px solid var(--line-strong); background: var(--card); color: var(--ink); cursor: pointer; border-radius: var(--radius); font-weight: 500; }
+.btn:hover:not(:disabled):not(.primary):not(.live) { background: var(--hover); }
 .btn:hover:not(:disabled) { border-color: var(--muted); }
 .btn.primary { background: var(--primary-bg); border-color: var(--primary-bg); color: var(--primary-fg); }
 .btn:disabled { border-color: var(--rule); color: var(--muted-2); background: var(--surface); cursor: default; }
-.btn.live { background: var(--accent); border-color: var(--accent); color: var(--primary-fg); }
+.btn.live { background: var(--warn); border-color: var(--warn); color: #FFFFFF; }  /* Hang up */
 
 /* the talk tab: an orb (LiveKit's Aura visualizer), the state in words, and two buttons; the details are folded away */
 #tab-chat { height: 100%; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 24px 24px 40px; }
 #stage { display: grid; justify-items: center; gap: 18px; width: 100%; max-width: 640px; padding-top: 8px; }
 .orb { --orb-size: clamp(170px, min(36vh, 70vw), 380px); width: var(--orb-size); height: var(--orb-size); position: relative; border-radius: 50%; }
 .orb canvas { display: block; width: 100%; height: 100%; }
-.orb.no-webgl { background: radial-gradient(circle at 50% 45%, rgba(31, 213, 249, .95), rgba(31, 213, 249, .35) 40%, rgba(31, 213, 249, 0) 68%);
+.orb.no-webgl { background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--ink) 90%, transparent), color-mix(in srgb, var(--ink) 30%, transparent) 40%, transparent 68%);
                 animation: orb-breathe 3s ease-in-out infinite; }
 .orb.no-webgl[data-state="thinking"], .orb.no-webgl[data-state="connecting"], .orb.no-webgl[data-state="initializing"] { animation-duration: .8s; }
 .orb.no-webgl[data-state="speaking"] { animation-duration: .5s; }
@@ -97,14 +104,15 @@ main { min-height: 0; }
 .cap:has(.cap-text:empty) .cap-who { visibility: hidden; }  /* no words yet: no label */
 .cap-text { font-size: 17px; line-height: 1.4; color: var(--ink); white-space: pre-line; }  /* a polished list has lines */
 .cap-text.interim { color: var(--muted); }  /* the STT may still change these words */
-.cap.agent .cap-text { color: var(--accent); max-height: 8.4em; overflow-y: auto; scrollbar-width: none; }
+.cap.you .cap-text { color: var(--ink-2); }  /* the agent's words are the brightest line */
+.cap.agent .cap-text { color: var(--ink); max-height: 8.4em; overflow-y: auto; scrollbar-width: none; }
 .orb-state { font-family: var(--f-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); min-height: 1.5em; }
 #vwarn { max-width: 52ch; text-align: center; }
 .stage-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .btn.talk { min-width: 150px; padding: 12px 32px; font-size: 16px; }
 #details { width: 100%; max-width: 1200px; border-top: 1px solid var(--rule); padding-top: 12px; }
 #details > summary { cursor: pointer; }
-.details-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); margin-top: 12px; border: 1px solid var(--rule); }
+.details-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); margin-top: 12px; border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
 #chat { min-width: 0; border-right: 1px solid var(--rule); background: var(--bg); }
 #log { max-height: 70vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
 #side { min-width: 0; max-height: 70vh; overflow-y: auto; padding: 20px; display: grid; gap: 24px; align-content: start; background: var(--surface); }
@@ -121,7 +129,7 @@ main { min-height: 0; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
 #side section { display: grid; gap: 10px; min-width: 0; }
 .persona { font-size: 26px; font-weight: 500; letter-spacing: -.02em; }
-.persona em { font-family: var(--f-serif); font-weight: 400; color: var(--accent); }
+.persona em { font-style: normal; font-weight: 400; color: var(--muted); }
 .kv { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
 .kv .k { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
 .track { display: grid; grid-template-columns: repeat(3, 1fr); }
@@ -140,7 +148,7 @@ main { min-height: 0; }
 .debts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .debts h3 { margin: 0 0 4px; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--line-strong); display: flex; justify-content: space-between; }
 .debts h3 span { font-family: var(--f-mono); font-weight: 400; color: var(--muted); }
-.debt { border: 1px solid var(--rule); background: var(--card); padding: 6px 8px; font-size: 12px; display: grid; gap: 2px; margin-bottom: 6px; }
+.debt { border: 1px solid var(--rule); border-radius: 8px; background: var(--card); padding: 6px 8px; font-size: 12px; display: grid; gap: 2px; margin-bottom: 6px; }
 .debt .id { font-family: var(--f-mono); font-size: 11px; font-weight: 500; }
 .debt .who2 { color: var(--muted); font-size: 11px; }
 .debt.need { border: 2px solid var(--accent); padding: 5px 7px; background: var(--accent-soft); }
@@ -165,7 +173,7 @@ details summary { cursor: pointer; }
 /* bench tool tabs */
 .tool { height: 100%; overflow-y: auto; padding: 20px 24px 48px; }
 .tool > .inner { max-width: 1200px; display: grid; gap: 16px; }
-.card { background: var(--card); border: 1px solid var(--rule); padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px 18px; display: grid; gap: 10px; min-width: 0; }
 .tablewrap { overflow-x: auto; }
 .tablewrap table { border-collapse: collapse; width: 100%; font-size: 13px; }
 .tablewrap th, .tablewrap td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule-2); vertical-align: top; }
@@ -187,6 +195,7 @@ audio { height: 32px; max-width: 260px; }
   .tool { height: auto; }
 }
 @media (max-width: 640px) { header, .models, nav.tabs, .tool, #tab-chat { padding-left: 16px; padding-right: 16px; } }
+@media (max-width: 480px) { .models label.field { flex-basis: 100%; max-width: none; } }  /* a phone: one field per row */
 </style>
 </head>
 <body>
@@ -612,7 +621,7 @@ function render() { renderLog(); renderSide(); showSessionModels(); }
 // Audio analyser with the settings of LiveKit's useTrackVolume; the orb also swells a little with your own voice while
 // it listens; a lower pixel ratio and a frame limit, because the GPU is shared with the local LLM; a CSS orb when WebGL
 // is not available.
-const AURA_COLOR = [31 / 255, 213 / 255, 249 / 255];  // LiveKit's default color, #1FD5F9
+const AURA_COLOR = {dark: [0.92, 0.92, 0.92], light: [0.12, 0.12, 0.12]};  // black and white (LiveKit's default is #1FD5F9)
 const AURA_HEAD = `precision highp float;
 uniform float iTime;
 uniform vec3 iResolution;
@@ -830,8 +839,8 @@ function makeAura(canvas) {
       gl.uniform1f(at.uFrequency, p.frequency); gl.uniform1f(at.uMix, p.brightness); gl.uniform1f(at.uMode, p.light ? 1 : 0);
       // the settings that LiveKit's component passes to its shader
       gl.uniform1f(at.uBlur, 0.2); gl.uniform1f(at.uShape, 1); gl.uniform1f(at.uBloom, 0); gl.uniform1f(at.uSpacing, 0.5);
-      gl.uniform1f(at.uColorShift, 0.05); gl.uniform1f(at.uVariance, 0.1); gl.uniform1f(at.uSmoothing, 1);
-      gl.uniform3f(at.uColor, ...AURA_COLOR);
+      gl.uniform1f(at.uColorShift, 0); gl.uniform1f(at.uVariance, 0.1); gl.uniform1f(at.uSmoothing, 1);
+      gl.uniform3f(at.uColor, ...(p.light ? AURA_COLOR.light : AURA_COLOR.dark));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     },
   };
