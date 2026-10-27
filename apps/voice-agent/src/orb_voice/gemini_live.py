@@ -43,6 +43,10 @@ def options(cfg: dict) -> dict:
         # one connection lasts about 10 minutes and an audio session 15: a sliding window and resumption go past both
         "context_window_compression": types.ContextWindowCompressionConfig(sliding_window=types.SlidingWindow()),
         "session_resumption": types.SessionResumptionConfig(),
+        # turns (gemini-live.md section 9): at the default sensitivity a short "Mhm" cut Gemini off mid-sentence
+        "realtime_input_config": types.RealtimeInputConfig(automatic_activity_detection=types.AutomaticActivityDetection(
+            start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
+            prefix_padding_ms=200, silence_duration_ms=700)),
     }
 
 

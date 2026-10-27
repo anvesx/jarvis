@@ -22,6 +22,8 @@ def test_options_carry_the_session_choice_transcripts_and_long_call_settings():
     assert (o["model"], o["voice"]) == ("gemini-3.8-live-extended-thinking", "Kore")
     assert o["input_audio_transcription"].language_codes == ["en-IN", "hi-IN", "gu-IN"]  # captions: no Italian for "Mhm"
     assert o["output_audio_transcription"] is not None
+    vad = o["realtime_input_config"].automatic_activity_detection  # a short "Mhm" must not cut a reply
+    assert vad.start_of_speech_sensitivity.name == "START_SENSITIVITY_LOW" and vad.prefix_padding_ms == 200
     assert o["context_window_compression"].sliding_window is not None and o["session_resumption"] is not None
     assert gemini_live.options({"gemini_model": "gpt-9", "gemini_voice": "Siri"})["model"] == gemini.DEFAULT_MODEL
     assert gemini_live.options({})["voice"] == gemini.DEFAULT_VOICE
