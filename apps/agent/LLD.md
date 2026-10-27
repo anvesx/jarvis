@@ -75,8 +75,9 @@ source but never warms the LLM (gemma4:e2b is 7.9 GB, and the call does not use 
   model and voice instead of the pipeline's fields, a note that the audio goes to Google, and captions labelled Gemini.
   The bar reads `/v1/models` first and on its own, so Gemini Live works when the speech service is not running. The page
   remembers the mode in this browser (`orb-mode`).
-  - **Talk** is the voice call. It has an orb (LiveKit's Aura visualizer, ported to the page: the shader and the state
-    table are theirs, Apache-2.0, license and notice in `static/vendor/`), a status line, captions of what the STT
+  - **Talk** is the voice call. It has an orb: a small character in SVG (a gradient body that breathes, eyes that blink
+    and follow the pointer, a mouth that moves with the agent's volume; it looks around while connecting, watches the
+    captions and swells with your voice while listening, and looks up with three dots while thinking), a status line, captions of what the STT
     heard and what the TTS speaks (LiveKit's `lk.transcription` text streams, each labelled with its model) and two
     buttons: **Talk / Hang up** and **New session**. It has no start screen and no text box. **Talk** makes a
     session by itself (topic "Open discussion") with the bar's models, gets a token, joins the room with the
